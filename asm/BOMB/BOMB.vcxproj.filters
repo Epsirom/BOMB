@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="inc">
+      <UniqueIdentifier>{6bf44504-d8b3-41ae-9aac-157ed69c1975}</UniqueIdentifier>
+      <Extensions>*.inc</Extensions>
+    </Filter>
+    <Filter Include="asm">
+      <UniqueIdentifier>{afb118cd-61e0-48dc-8de7-402f11e5ec77}</UniqueIdentifier>
+      <Extensions>*.asm</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="main.asm">
+      <Filter>asm</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>
