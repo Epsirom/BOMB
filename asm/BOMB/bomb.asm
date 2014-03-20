@@ -1,12 +1,8 @@
 TITLE main.asm      
-; ===============================================      
-;   Author: w&c&c      
-;   Date:   19/03/2014      
-; ===============================================      
     .386      
     .model flat,stdcall      
     option casemap:none    
-                
+
 INCLUDELIB kernel32.lib
 INCLUDELIB user32.lib
 INCLUDELIB gdi32.lib
@@ -15,9 +11,8 @@ INCLUDE windows.inc
 INCLUDE user32.inc
 INCLUDE kernel32.inc
 INCLUDE gdi32.inc 
-
-INCLUDE constant.inc    
-INCLUDE proc.inc       
+               
+INCLUDE bomb.inc
 
 .data      
     hInstance       dd 0    ;应用程序句柄   
@@ -66,7 +61,7 @@ WinMain proc hInst:DWORD,
     mov wndclass.hbrBackground,eax      
     mov wndclass.lpszMenuName,0      
     mov wndclass.lpszClassName,OFFSET ClassName      
-    INVOKE LoadIcon,hInst,NULL      
+    INVOKE LoadImage, NULL, ADDR BmpIconFilePath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE      
     mov wndclass.hIcon,eax      
     INVOKE LoadCursor,0,IDC_ARROW      
     mov wndclass.hCursor,eax      
@@ -178,7 +173,24 @@ messageID  DWORD ?
 	ret
 ErrorHandler ENDP
  
+;#################
+;键盘事件
+KeyDownProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	.IF wParam == VK_UP
+	.ELSEIF wParam == VK_DOWN
+	.ELSEIF wParam == VK_LEFT
+	.ELSEIF wParam == VK_RIGHT
+	.ENDIF
+	ret
+KeyDownProc ENDP
 
+KeyUpProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	INVOKE MessageBox, NULL, pErrorMsg, ADDR ErrorTitle, MB_OK
+	ret
+KeyUpProc ENDP
+
+;###################
+;绘图函数
 PaintProc PROC hWin:DWORD
 	LOCAL hOld: DWORD
 	LOCAL xIndex: DWORD
@@ -211,16 +223,6 @@ PaintProc PROC hWin:DWORD
     INVOKE DeleteDC,memDC
     ret
 PaintProc ENDP
- 
-KeyDownProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
-	INVOKE MessageBox, NULL, pErrorMsg, ADDR ErrorTitle, MB_OK
-	ret
-KeyDownProc ENDP
-
-KeyUpProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
-	INVOKE MessageBox, NULL, pErrorMsg, ADDR ErrorTitle, MB_OK
-	ret
-KeyUpProc ENDP
 
 DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	LOCAL xPos: DWORD
