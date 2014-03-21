@@ -19,6 +19,7 @@ INCLUDE bomb.inc
     hWnd            dd 0    ;窗口句柄   
     hMenu           dd 0    ;菜单句柄   
 	CommandLine     dd 0
+	CurrentBmp      dd 0
 
 	ErrorTitle      db "Error",0
     ClassName       db "Demo",0      
@@ -85,9 +86,21 @@ WinMain proc hInst:DWORD,
 	mov BmpBackground, eax
 	INVOKE LoadImage, NULL, ADDR BmpNumber2FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
 	mov BmpNumber2, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber4FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber4, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber8FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber8, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber16FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber16, eax
+	 
+	mov eax, BmpNumber2
+	mov CurrentBmp, eax 
 	   
     INVOKE ShowWindow,hWnd,SW_SHOWNORMAL    ;     
     INVOKE UpdateWindow,hWnd 
+    INVOKE GetWindowRect, hWnd, ADDR rect
+    ;设置时钟
+    INVOKE SetTimer, hWnd, 1, 20, NULL
 
 ;开始程序的持续消息处理循环     
 MessageLoop:      
@@ -98,6 +111,8 @@ MessageLoop:
     INVOKE DispatchMessage,ADDR msg         ;分发消息   
     jmp MessageLoop  
     
+	;关闭时钟
+	INVOKE KillTimer, hWnd, 1
 Exit_Program:      
         INVOKE ExitProcess, 0      
 WinMain endp      
@@ -120,6 +135,9 @@ WndProc proc hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
     ;    .ENDIF   
     ;    INVOKE SetMenu, hWin, hMenu     ;设置菜单
 		jmp WndProcExit
+	.ELSEIF uMsg == WM_TIMER
+        INVOKE TimerProc, uMsg, wParam, lParam
+        INVOKE InvalidateRect, hWin, NULL, FALSE
 	.ELSEIF uMsg == WM_PAINT
 		INVOKE BeginPaint, hWin, ADDR ps
 		mov hDC, eax
@@ -127,10 +145,10 @@ WndProc proc hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		INVOKE EndPaint, hWin, ADDR ps
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_KEYDOWN
-		INVOKE KeyDownProc,uMsg, wParam, lParam
+		INVOKE KeyDownProc, uMsg, wParam, lParam
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_KEYUP
-		INVOKE KeyUpProc,uMsg, wParam, lParam
+		INVOKE KeyUpProc, uMsg, wParam, lParam
 		jmp WndProcExit
     .ELSEIF uMsg == WM_DESTROY   
         INVOKE PostQuitMessage,0        ;退出消息循环
@@ -177,17 +195,30 @@ ErrorHandler ENDP
 ;键盘事件
 KeyDownProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.IF wParam == VK_UP
+		mov eax, BmpNumber2
+		mov CurrentBmp, eax
 	.ELSEIF wParam == VK_DOWN
+		mov eax, BmpNumber4
+		mov CurrentBmp, eax
 	.ELSEIF wParam == VK_LEFT
+		mov eax, BmpNumber8
+		mov CurrentBmp, eax
 	.ELSEIF wParam == VK_RIGHT
+		mov eax, BmpNumber16
+		mov CurrentBmp, eax
 	.ENDIF
 	ret
 KeyDownProc ENDP
 
 KeyUpProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
-	INVOKE MessageBox, NULL, pErrorMsg, ADDR ErrorTitle, MB_OK
+	;INVOKE MessageBox, NULL, pErrorMsg, ADDR ErrorTitle, MB_OK
 	ret
 KeyUpProc ENDP
+
+;时钟事件
+TimerProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	ret
+TimerProc ENDP
 
 ;###################
 ;绘图函数
@@ -204,14 +235,14 @@ PaintProc PROC hWin:DWORD
 
 	;画背景
     ;INVOKE BitBlt,hDC,0,0,600,600,memDC,0,0,SRCCOPY
-	INVOKE StretchBlt, hDC, 0, 0, ClientWidth, ClientHeight, memDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
+	INVOKE StretchBlt, hDC, ClientOffX, ClientOffY, ClientWidth, ClientHeight, memDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
 
 	;画方块
 	mov xIndex, 0
 	mov yIndex, 0
 	.WHILE xIndex < 4
 		.WHILE yIndex < 4
-			INVOKE DrawSquare,xIndex,yIndex,BmpNumber2
+			INVOKE DrawSquare,xIndex,yIndex,CurrentBmp
 			inc yIndex	
 		.ENDW
 		inc xIndex
@@ -235,6 +266,8 @@ DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	mov eax, xIndex
 	mul SquareWidth
 	add xPos, eax
+	mov eax, ClientOffX
+	add xPos, eax
 
 	mov eax, yIndex
 	inc eax
@@ -242,6 +275,8 @@ DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	mov yPos, eax
 	mov eax, yIndex
 	mul SquareHeight
+	add yPos, eax
+	mov eax, ClientOffY
 	add yPos, eax
 
 	INVOKE SelectObject,memDC,bmpObj
