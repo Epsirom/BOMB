@@ -3,15 +3,21 @@ TITLE main.asm
     .model flat,stdcall      
     option casemap:none    
 
+
+
 INCLUDELIB kernel32.lib
 INCLUDELIB user32.lib
 INCLUDELIB gdi32.lib
+INCLUDELIB masm32.lib
 
+
+INCLUDE masm32.inc
 INCLUDE windows.inc
 INCLUDE user32.inc
 INCLUDE kernel32.inc
 INCLUDE gdi32.inc 
                
+INCLUDE bomb_core.inc
 INCLUDE bomb.inc
 
 .data      

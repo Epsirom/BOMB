@@ -11,7 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="main.asm" />
+    <MASM Include="bomb.asm" />
+    <MASM Include="bomb_core.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bomb.inc" />
+    <None Include="bomb_core.inc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4164AA65-1EF9-4E69-899B-D1BED776070B}</ProjectGuid>

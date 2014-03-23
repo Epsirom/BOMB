@@ -11,8 +11,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="main.asm">
+    <MASM Include="bomb.asm">
       <Filter>asm</Filter>
     </MASM>
+    <MASM Include="bomb_core.asm">
+      <Filter>asm</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bomb.inc">
+      <Filter>inc</Filter>
+    </None>
+    <None Include="bomb_core.inc">
+      <Filter>inc</Filter>
+    </None>
   </ItemGroup>
 </Project>

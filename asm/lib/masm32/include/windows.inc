@@ -115,7 +115,7 @@ WINAPI                      typedef PROTO STDCALL
 
 ; 8 bit   BYTE
 ; ~~~~~
-CHAR                        typedef BYTE
+;CHAR                        typedef BYTE
 UCHAR                       typedef BYTE
 ;;; TBYTE                       typedef BYTE ; naming conflist with MASM data type
 
