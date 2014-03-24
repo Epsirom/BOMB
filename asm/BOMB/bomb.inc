@@ -1,8 +1,10 @@
+IFNDEF BOMB_INC
+
 ;local prototye
 	WinMain PROTO :DWORD,:DWORD,:DWORD,:DWORD      
 	WndProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	PaintProc PROTO :DWORD    
-	KeyDownProc PROTO :DWORD,:DWORD,:DWORD
+	KeyDownProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	KeyUpProc PROTO :DWORD,:DWORD,:DWORD
     TimerProc PROTO :DWORD,:DWORD,:DWORD
 	DrawSquare PROTO :DWORD,:DWORD,:DWORD
@@ -36,6 +38,7 @@
 	;位图句柄
 	BmpBackground dd ?
 	BmpIcon dd ?
+	BmpBrick dd ?
 	BmpNumber0 dd ?
 	BmpNumber2 dd ?
 	BmpNumber4 dd ?
@@ -52,7 +55,8 @@
 	;位图文件路径
 	BmpBackgroundFilePath BYTE 'images/bg485.bmp', 0
 	BmpIconFilePath BYTE 'images/icons/icon.ico', 0
-	BmpNumberFilePath BYTE 'images/pile107-0.bmp', 0
+	BmpBrickPath BYTE 'images/brick107.bmp', 0
+	BmpNumber0FilePath BYTE 'images/pile107-0.bmp', 0
 	BmpNumber2FilePath BYTE 'images/pile107-2.bmp', 0
 	BmpNumber4FilePath BYTE 'images/pile107-4.bmp', 0
 	BmpNumber8FilePath BYTE 'images/pile107-8.bmp', 0
@@ -64,3 +68,22 @@
 	BmpNumber512FilePath BYTE 'images/pile107-512.bmp', 0
 	BmpNumber1024FilePath BYTE 'images/pile107-1024.bmp', 0
 	BmpNumber2048FilePath BYTE 'images/pile107-2048.bmp', 0
+
+;===================Macros====================
+SetCurrentBmp MACRO num:REQ
+	.IF num >= 80000000h
+		mov eax, BmpBrick
+	.ELSEIF num == 0
+		mov eax, BmpNumber0
+	.ELSEIF num == 2
+		mov eax, BmpNumber2
+	.ELSEIF num == 4
+		mov eax, BmpNumber4
+	.ELSEIF num == 8
+		mov eax, BmpNumber8
+	.ELSE
+		mov eax, BmpNumber16
+	.ENDIF
+ENDM
+
+ENDIF
