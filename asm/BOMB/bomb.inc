@@ -2,7 +2,7 @@
 	WinMain PROTO :DWORD,:DWORD,:DWORD,:DWORD      
 	WndProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	PaintProc PROTO :DWORD    
-	KeyDownProc PROTO :DWORD,:DWORD,:DWORD
+	KeyDownProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	KeyUpProc PROTO :DWORD,:DWORD,:DWORD
     TimerProc PROTO :DWORD,:DWORD,:DWORD
 	DrawSquare PROTO :DWORD,:DWORD,:DWORD
@@ -64,3 +64,10 @@
 	BmpNumber512FilePath BYTE 'images/pile107-512.bmp', 0
 	BmpNumber1024FilePath BYTE 'images/pile107-1024.bmp', 0
 	BmpNumber2048FilePath BYTE 'images/pile107-2048.bmp', 0
+
+	Mp3DeviceID dd 0
+	PlayFlag    dd 0
+	Mp3Files    db "*.mp3",125 dup (0)
+	Mp3Device   db "MPEGVideo",0
+	;“Ù¿÷Œƒº˛¬∑æ∂
+	MusicFileName db 'music.mp3', 0

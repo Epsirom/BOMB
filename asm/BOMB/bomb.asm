@@ -9,13 +9,16 @@ INCLUDELIB kernel32.lib
 INCLUDELIB user32.lib
 INCLUDELIB gdi32.lib
 INCLUDELIB masm32.lib
-
+INCLUDELIB comctl32.lib
+INCLUDELIB winmm.lib
 
 INCLUDE masm32.inc
 INCLUDE windows.inc
 INCLUDE user32.inc
 INCLUDE kernel32.inc
-INCLUDE gdi32.inc 
+INCLUDE gdi32.inc
+INCLUDE comctl32.inc
+INCLUDE winmm.inc 
                
 INCLUDE bomb_core.inc
 INCLUDE bomb.inc
@@ -124,6 +127,26 @@ Exit_Program:
 WinMain endp      
 ; ===============================================   
 
+; ===============================================
+PlayMp3File proc hWin:DWORD,NameOfFile:DWORD
+
+      LOCAL mciOpenParms:MCI_OPEN_PARMS,mciPlayParms:MCI_PLAY_PARMS
+
+            mov eax,hWin        
+            mov mciPlayParms.dwCallback,eax
+            mov eax,OFFSET Mp3Device
+            mov mciOpenParms.lpstrDeviceType,eax
+            mov eax,NameOfFile
+            mov mciOpenParms.lpstrElementName,eax
+            invoke mciSendCommand,0,MCI_OPEN,MCI_OPEN_TYPE or MCI_OPEN_ELEMENT,ADDR mciOpenParms
+            mov eax,mciOpenParms.wDeviceID
+            mov Mp3DeviceID,eax
+            invoke mciSendCommand,Mp3DeviceID,MCI_PLAY,MCI_NOTIFY,ADDR mciPlayParms
+            ret  
+
+PlayMp3File endp
+; ===============================================
+
 ;消息处理函数   
 WndProc proc hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD      
     LOCAL hPopMenu      ;一级菜单句柄
@@ -151,7 +174,7 @@ WndProc proc hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		INVOKE EndPaint, hWin, ADDR ps
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_KEYDOWN
-		INVOKE KeyDownProc, uMsg, wParam, lParam
+		INVOKE KeyDownProc, hWin, uMsg, wParam, lParam
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_KEYUP
 		INVOKE KeyUpProc, uMsg, wParam, lParam
@@ -199,7 +222,7 @@ ErrorHandler ENDP
  
 ;#################
 ;键盘事件
-KeyDownProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
+KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.IF wParam == VK_UP
 		mov eax, BmpNumber2
 		mov CurrentBmp, eax
@@ -212,6 +235,20 @@ KeyDownProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.ELSEIF wParam == VK_RIGHT
 		mov eax, BmpNumber16
 		mov CurrentBmp, eax
+	.ELSEIF wParam == 80 ;press VK 'P' to Play mp3
+		.IF PlayFlag == 0
+            mov PlayFlag,1  
+            invoke PlayMp3File,hWin,ADDR MusicFileName
+        .ENDIF
+	.ELSEIF wParam == 83 ;press VK 'P' to Stop mp3
+		invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
+        mov PlayFlag,0
+	.ELSEIF wParam == MM_MCINOTIFY
+            ;-----------------------------------------------------
+            ; Sent when media play completes and closes mp3 device
+            ;-----------------------------------------------------
+            invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
+            mov PlayFlag,0
 	.ENDIF
 	ret
 KeyDownProc ENDP
