@@ -57,6 +57,7 @@ InitMap PROC USES eax ebx ecx edx
 	mov emptyBlocks, 0
 	mov numberBlocks, 2
 	
+	mov bombTarget, 4
 	;mDumpMem OFFSET map, RESULT_QUEUE_SIZE / 2, TYPE map
 	ret
 InitMap ENDP
@@ -93,7 +94,7 @@ AddNum PROC USES ebx ecx edx esi edi
 	SetMapAndReturn:
 		Rand 10
 		mov edi, 2
-		.IF eax >= 7
+		.IF eax >= 9
 			shl edi, 1
 		.ENDIF
 		SetMapAt esi, ecx, edi

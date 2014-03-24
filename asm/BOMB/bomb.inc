@@ -10,11 +10,12 @@ IFNDEF BOMB_INC
 	DrawSquare PROTO :DWORD,:DWORD,:DWORD
 
 .data
-	MENU_ABOUTAUTHOR    equ    1000
+	MENU_ABOUTAUTHOR equ 1000
+	GameTitle db "BOMB!",0
 
 	;´°Ìå²ÎÊý
 	WndWidth dd 568
-	WndHeight dd 591
+	WndHeight dd 691
 	ClientWidth dd 488
 	ClientHeight dd 488
 	WndOffX dd 850
@@ -23,7 +24,7 @@ IFNDEF BOMB_INC
 	BgBmpWidth dd 485
 	BgBmpHeight dd 485
 	ClientOffX dd 30
-	ClientOffY dd 30
+	ClientOffY dd 130
 	SquareWidth dd 107
 	SquareHeight dd 107
 	SquareBmpWidth dd 107
@@ -81,8 +82,22 @@ SetCurrentBmp MACRO num:REQ
 		mov eax, BmpNumber4
 	.ELSEIF num == 8
 		mov eax, BmpNumber8
-	.ELSE
+	.ELSEIF
 		mov eax, BmpNumber16
+	.ELSEIF
+		mov eax, BmpNumber32
+	.ELSEIF
+		mov eax, BmpNumber64
+	.ELSEIF
+		mov eax, BmpNumber128
+	.ELSEIF
+		mov eax, BmpNumber256
+	.ELSEIF
+		mov eax, BmpNumber512
+	.ELSEIF
+		mov eax, BmpNumber1024
+	.ELSEIF
+		mov eax, BmpNumber2048
 	.ENDIF
 ENDM
 

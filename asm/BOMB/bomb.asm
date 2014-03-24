@@ -221,24 +221,22 @@ ErrorHandler ENDP
 KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.IF wParam == VK_UP
 		mov eax, DIR_UP
+		INVOKE DoMove
 	.ELSEIF wParam == VK_DOWN
 		mov eax, DIR_DOWN
+		INVOKE DoMove
 	.ELSEIF wParam == VK_LEFT
 		mov eax, DIR_LEFT
+		INVOKE DoMove
 	.ELSEIF wParam == VK_RIGHT
 		mov eax, DIR_RIGHT
+		INVOKE DoMove
+	.ELSE
+		mov eax, 0
 	.ENDIF
-	INVOKE DoMove
-	mov ecx, 2
-	mov edx, 1
-	MapAt ecx, edx
-	mov ecx, eax
-	INVOKE AddNum
-	
-	mov ecx, 2
-	mov edx, 1
-	MapAt ecx, edx
-	mov ecx, eax
+	.IF eax > 0
+		INVOKE AddNum
+	.ENDIF
 	INVOKE InvalidateRect, hWin, NULL, FALSE
 	ret
 KeyDownProc ENDP
@@ -258,7 +256,7 @@ PaintProc PROC hWin:DWORD
 	LOCAL hOld: DWORD
 	LOCAL xIndex: DWORD
 	LOCAL yIndex: DWORD
-
+	LOCAL textRect: RECT
     INVOKE CreateCompatibleDC,hDC
     mov memDC, eax
     
@@ -268,6 +266,13 @@ PaintProc PROC hWin:DWORD
 	;画背景
     ;INVOKE BitBlt,hDC,0,0,600,600,memDC,0,0,SRCCOPY
 	INVOKE StretchBlt, hDC, ClientOffX, ClientOffY, ClientWidth, ClientHeight, memDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
+
+	;画文字
+	mov textRect.top, 10
+	mov textRect.left, 10
+	mov textRect.right, 100
+	mov textRect.bottom, 100
+	INVOKE DrawText, hDC, ADDR GameTitle, -1, ADDR textRect, DT_CENTER 
 
 	;画方块
 	mov xIndex, 0
