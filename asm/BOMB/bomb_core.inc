@@ -37,7 +37,9 @@ MAP_FAIL EQU 2
 Rand MACRO range:REQ
 	;mov eax, range
 	;call RandomRange
+	push ecx
 	INVOKE nrandom, range
+	pop ecx
 ENDM
 
 ; uses ebx

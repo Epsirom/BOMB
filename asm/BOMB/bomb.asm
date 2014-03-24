@@ -39,27 +39,28 @@ INCLUDE bomb.inc
 ; ===============================================      
 .code      
 start:      
+	INVOKE GetTickCount
+	INVOKE nseed, eax
+
     INVOKE GetModuleHandle,0    ;获取应用程序模块句柄   
     mov hInstance,eax           ;保存应用程序句柄 
-	 
+
 	INVOKE GetCommandLine
 	mov CommandLine, eax
     
 	INVOKE WinMain,hInstance,0,CommandLine,SW_SHOWDEFAULT      
     INVOKE ExitProcess,eax      ;退出程序,并返回eax的值   
 ; ===============================================      
-WinMain proc hInst:DWORD, 
+WinMain PROC hInst:DWORD, 
 			 hPrevInst:DWORD,
 			 CmdLine:DWORD,
 			 CmdShow:DWORD      
 
     LOCAL wndclass:WNDCLASSEX      
     LOCAL msg:MSG      
-     
-	;==================================================
-	; Fill WNDCLASSEX structure with required variables
-	;==================================================
 
+
+	;初始化窗口
     mov wndclass.cbSize,sizeof WNDCLASSEX      
     mov wndclass.style,CS_HREDRAW or CS_VREDRAW or CS_BYTEALIGNWINDOW      
     mov wndclass.lpfnWndProc,OFFSET WndProc      
@@ -89,10 +90,12 @@ WinMain proc hInst:DWORD,
 		jmp Exit_Program
 	.ENDIF		  
     mov   hWnd,eax                          ;保存窗口句柄
-	
+
 	;载入图片
 	INVOKE LoadImage, NULL, ADDR BmpBackgroundFilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
 	mov BmpBackground, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber0FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber0, eax
 	INVOKE LoadImage, NULL, ADDR BmpNumber2FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
 	mov BmpNumber2, eax
 	INVOKE LoadImage, NULL, ADDR BmpNumber4FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
@@ -101,10 +104,30 @@ WinMain proc hInst:DWORD,
 	mov BmpNumber8, eax
 	INVOKE LoadImage, NULL, ADDR BmpNumber16FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
 	mov BmpNumber16, eax
-	 
-	mov eax, BmpNumber2
-	mov CurrentBmp, eax 
-	   
+	INVOKE LoadImage, NULL, ADDR BmpNumber32FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber32, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber64FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber64, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber128FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber128, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber256FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber256, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber512FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber512, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber1024FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber1024, eax
+	INVOKE LoadImage, NULL, ADDR BmpNumber2048FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpNumber2048, eax
+	INVOKE LoadImage, NULL, ADDR BmpBrickPath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	mov BmpBrick, eax
+
+	mov eax, BmpBrick
+	mov CurrentBmp, eax
+	
+	;初始化地图
+	mov eax, 4
+	INVOKE InitMap
+
     INVOKE ShowWindow,hWnd,SW_SHOWNORMAL    ;     
     INVOKE UpdateWindow,hWnd 
     INVOKE GetWindowRect, hWnd, ADDR rect
@@ -148,11 +171,11 @@ PlayMp3File endp
 ; ===============================================
 
 ;消息处理函数   
-WndProc proc hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD      
+WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD      
     LOCAL hPopMenu      ;一级菜单句柄
 	LOCAL ps  :PAINTSTRUCT
 	LOCAL pt  :POINT
-		   
+
     .IF uMsg == WM_CREATE      
     ;    INVOKE CreateMenu   
     ;    mov hMenu, eax   
@@ -166,7 +189,6 @@ WndProc proc hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_TIMER
         INVOKE TimerProc, uMsg, wParam, lParam
-        INVOKE InvalidateRect, hWin, NULL, FALSE
 	.ELSEIF uMsg == WM_PAINT
 		INVOKE BeginPaint, hWin, ADDR ps
 		mov hDC, eax
@@ -196,10 +218,8 @@ WndProcExit:
     ret      
 WndProc endp      
 
-;---------------------------------------------------
+;错误处理，打印出错误信息
 ErrorHandler PROC
-; Display the appropriate system error message.
-;---------------------------------------------------
 .data
 pErrorMsg  DWORD ?		; ptr to error message
 messageID  DWORD ?
@@ -220,21 +240,16 @@ messageID  DWORD ?
 	ret
 ErrorHandler ENDP
  
-;#################
 ;键盘事件
 KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.IF wParam == VK_UP
-		mov eax, BmpNumber2
-		mov CurrentBmp, eax
+		mov eax, DIR_UP
 	.ELSEIF wParam == VK_DOWN
-		mov eax, BmpNumber4
-		mov CurrentBmp, eax
+		mov eax, DIR_DOWN
 	.ELSEIF wParam == VK_LEFT
-		mov eax, BmpNumber8
-		mov CurrentBmp, eax
+		mov eax, DIR_LEFT
 	.ELSEIF wParam == VK_RIGHT
-		mov eax, BmpNumber16
-		mov CurrentBmp, eax
+		mov eax, DIR_RIGHT
 	.ELSEIF wParam == 80 ;press VK 'P' to Play mp3
 		.IF PlayFlag == 0
             mov PlayFlag,1  
@@ -250,6 +265,18 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
             invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
             mov PlayFlag,0
 	.ENDIF
+	INVOKE DoMove
+	mov ecx, 2
+	mov edx, 1
+	MapAt ecx, edx
+	mov ecx, eax
+	INVOKE AddNum
+	
+	mov ecx, 2
+	mov edx, 1
+	MapAt ecx, edx
+	mov ecx, eax
+	INVOKE InvalidateRect, hWin, NULL, FALSE
 	ret
 KeyDownProc ENDP
 
@@ -263,7 +290,6 @@ TimerProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	ret
 TimerProc ENDP
 
-;###################
 ;绘图函数
 PaintProc PROC hWin:DWORD
 	LOCAL hOld: DWORD
@@ -285,7 +311,13 @@ PaintProc PROC hWin:DWORD
 	mov yIndex, 0
 	.WHILE xIndex < 4
 		.WHILE yIndex < 4
-			INVOKE DrawSquare,xIndex,yIndex,CurrentBmp
+			mov ecx, xIndex
+			mov edx, yIndex
+			MapAt edx, ecx
+			mov ecx, eax
+			SetCurrentBmp ecx
+			mov CurrentBmp, eax
+			INVOKE DrawSquare, xIndex, yIndex, CurrentBmp
 			inc yIndex	
 		.ENDW
 		inc xIndex
@@ -326,5 +358,4 @@ DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	INVOKE StretchBlt, hDC, xPos, yPos, SquareWidth, SquareHeight, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
 	ret
 DrawSquare ENDP
-
-end start    
+end start 
