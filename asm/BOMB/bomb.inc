@@ -75,6 +75,12 @@ IFNDEF BOMB_INC
 	BmpNumber1024FilePath BYTE 'images/pile107-1024.bmp', 0
 	BmpNumber2048FilePath BYTE 'images/pile107-2048.bmp', 0
 
+	Mp3DeviceID dd 0
+	PlayFlag    dd 0
+	Mp3Files    db "*.mp3",125 dup (0)
+	Mp3Device   db "MPEGVideo",0
+	;ÒôÀÖÎÄ¼þÂ·¾¶
+	MusicFileName db 'music.mp3', 0
 ;===================Macros====================
 SetCurrentBmp MACRO num:REQ
 	.IF num >= 80000000h
