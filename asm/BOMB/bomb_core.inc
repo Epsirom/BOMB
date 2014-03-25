@@ -17,7 +17,7 @@ RESULT_QUEUE_SIZE = MAX_MAP_SIZE * MAX_MAP_SIZE * 2
 EXTERNDEF map:SDWORD, 
 	mapRowSize:ABS, 
 	mapSize:SDWORD, 
-	bombTarget:SDWORD, 
+	bombTarget:DWORD, 
 	resultQueue:DWORD, 
 	emptyBlocks:SDWORD, 
 	numberBlocks:SDWORD

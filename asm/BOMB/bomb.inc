@@ -8,10 +8,15 @@ IFNDEF BOMB_INC
 	KeyUpProc PROTO :DWORD,:DWORD,:DWORD
     TimerProc PROTO :DWORD,:DWORD,:DWORD
 	DrawSquare PROTO :DWORD,:DWORD,:DWORD
+	DrawNextNumberText PROTO
 
 .data
 	MENU_ABOUTAUTHOR equ 1000
 	GameTitle db "BOMB!",0
+	NextNumberText db " Next Bomb Number:", 0
+	FontName db "Arial", 0
+	WinMsg db "You Win!", 0
+	FailMsg db "You Lose!", 0
 
 	;´°Ìå²ÎÊý
 	WndWidth dd 568
@@ -82,21 +87,21 @@ SetCurrentBmp MACRO num:REQ
 		mov eax, BmpNumber4
 	.ELSEIF num == 8
 		mov eax, BmpNumber8
-	.ELSEIF
+	.ELSEIF num == 16
 		mov eax, BmpNumber16
-	.ELSEIF
+	.ELSEIF num == 32
 		mov eax, BmpNumber32
-	.ELSEIF
+	.ELSEIF num == 64
 		mov eax, BmpNumber64
-	.ELSEIF
+	.ELSEIF num == 128
 		mov eax, BmpNumber128
-	.ELSEIF
+	.ELSEIF num == 256
 		mov eax, BmpNumber256
-	.ELSEIF
+	.ELSEIF num == 512
 		mov eax, BmpNumber512
-	.ELSEIF
+	.ELSEIF num == 1024
 		mov eax, BmpNumber1024
-	.ELSEIF
+	.ELSEIF num == 2048
 		mov eax, BmpNumber2048
 	.ENDIF
 ENDM

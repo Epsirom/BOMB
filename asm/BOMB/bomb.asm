@@ -237,6 +237,12 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.IF eax > 0
 		INVOKE AddNum
 	.ENDIF
+	INVOKE CheckMap
+	.IF eax == MAP_FAIL
+		INVOKE MessageBox, 0, ADDR FailMsg, 0, MB_OK
+	.ELSEIF eax == MAP_WIN
+		INVOKE MessageBox, 0, ADDR WinMsg, 0, MB_OK
+	.ENDIF
 	INVOKE InvalidateRect, hWin, NULL, FALSE
 	ret
 KeyDownProc ENDP
@@ -257,22 +263,45 @@ PaintProc PROC hWin:DWORD
 	LOCAL xIndex: DWORD
 	LOCAL yIndex: DWORD
 	LOCAL textRect: RECT
+	LOCAL hfont: HFONT   
+
     INVOKE CreateCompatibleDC,hDC
+
     mov memDC, eax
     
     INVOKE SelectObject,memDC,BmpBackground
     mov hOld, eax
 
 	;画背景
-    ;INVOKE BitBlt,hDC,0,0,600,600,memDC,0,0,SRCCOPY
 	INVOKE StretchBlt, hDC, ClientOffX, ClientOffY, ClientWidth, ClientHeight, memDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
 
 	;画文字
-	mov textRect.top, 10
-	mov textRect.left, 10
-	mov textRect.right, 100
-	mov textRect.bottom, 100
-	INVOKE DrawText, hDC, ADDR GameTitle, -1, ADDR textRect, DT_CENTER 
+	INVOKE CreateFont, 80,
+                       0,
+                       0,
+                       0,
+                       FW_EXTRABOLD,
+                       FALSE,
+                       FALSE,
+                       FALSE,
+                       DEFAULT_CHARSET,
+                       OUT_TT_PRECIS,
+                       CLIP_DEFAULT_PRECIS,
+                       CLEARTYPE_QUALITY,
+                       DEFAULT_PITCH or FF_DONTCARE,
+                       OFFSET FontName
+    mov hfont, eax
+	INVOKE SetBkMode, hDC, TRANSPARENT
+	INVOKE SetTextColor, hDC, 00656E77h
+	;INVOKE CreateSolidBrush, 008888FFh
+	;INVOKE FillRect,hDC,ADDR textRect,eax
+	INVOKE SelectObject, hDC, hfont
+	mov textRect.top, 20
+	mov textRect.left, 30
+	mov textRect.right, 300
+	mov textRect.bottom, 200
+	INVOKE DrawText, hDC, ADDR GameTitle, -1, ADDR textRect, DT_VCENTER 
+	;INVOKE BitBlt, hDC, 0, 0, textRect.right, textRect.bottom, memDC, 0, 0, SRCCOPY
 
 	;画方块
 	mov xIndex, 0
@@ -291,6 +320,8 @@ PaintProc PROC hWin:DWORD
 		inc xIndex
 		mov yIndex, 0
 	.ENDW
+
+	INVOKE DrawNextNumberText
 
     INVOKE SelectObject,hDC,hOld
 
@@ -326,5 +357,41 @@ DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	INVOKE StretchBlt, hDC, xPos, yPos, SquareWidth, SquareHeight, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
 	ret
 DrawSquare ENDP
+
+DrawNextNumberText PROC
+	LOCAL textRect: RECT
+	LOCAL hfont: HFONT
+	
+	mov textRect.top, 30
+	mov textRect.left, 330
+	mov textRect.right, 530
+	mov textRect.bottom, 110
+	INVOKE CreateSolidBrush, 00A0ADBBh
+	INVOKE FillRect,hDC,ADDR textRect,eax
+	INVOKE CreateFont, 22,
+                       0,
+                       0,
+                       0,
+                       FW_EXTRABOLD,
+                       FALSE,
+                       FALSE,
+                       FALSE,
+                       DEFAULT_CHARSET,
+                       OUT_TT_PRECIS,
+                       CLIP_DEFAULT_PRECIS,
+                       CLEARTYPE_QUALITY,
+                       DEFAULT_PITCH or FF_DONTCARE,
+                       OFFSET FontName
+    mov hfont, eax
+	INVOKE SetBkMode, hDC, TRANSPARENT
+	INVOKE SetTextColor, hDC, 00EFF8FAh
+	INVOKE SelectObject, hDC, hfont
+	INVOKE DrawText, hDC, ADDR NextNumberText, -1, ADDR textRect, DT_VCENTER 
+	SetCurrentBmp bombTarget
+	mov CurrentBmp, eax
+	INVOKE SelectObject,memDC, CurrentBmp
+	INVOKE StretchBlt, hDC, 410, 60, 40, 40, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
+	ret
+DrawNextNumberText ENDP
 
 end start 
