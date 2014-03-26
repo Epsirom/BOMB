@@ -26,4 +26,29 @@
       <Filter>inc</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="images\bg485.bmp" />
+    <Image Include="images\brick107.bmp" />
+    <Image Include="images\pile107-0.bmp" />
+    <Image Include="images\pile107-2.bmp" />
+    <Image Include="images\pile107-4.bmp" />
+    <Image Include="images\pile107-8.bmp" />
+    <Image Include="images\pile107-16.bmp" />
+    <Image Include="images\pile107-32.bmp" />
+    <Image Include="images\pile107-64.bmp" />
+    <Image Include="images\pile107-128.bmp" />
+    <Image Include="images\pile107-256.bmp" />
+    <Image Include="images\pile107-512.bmp" />
+    <Image Include="images\pile107-1024.bmp" />
+    <Image Include="images\pile107-2048.bmp" />
+    <Image Include="images\bitmap15.bmp" />
+    <Image Include="images\icons\icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="resource1.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BOMB.rc" />
+  </ItemGroup>
 </Project>

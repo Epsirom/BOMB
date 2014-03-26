@@ -72,7 +72,7 @@ WinMain PROC hInst:DWORD,
     mov wndclass.hbrBackground,eax      
     mov wndclass.lpszMenuName,0      
     mov wndclass.lpszClassName,OFFSET ClassName      
-    INVOKE LoadImage, NULL, ADDR BmpIconFilePath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE      
+    INVOKE LoadIcon, hInstance, 130
     mov wndclass.hIcon,eax      
     INVOKE LoadCursor,0,IDC_ARROW      
     mov wndclass.hCursor,eax      
@@ -92,34 +92,34 @@ WinMain PROC hInst:DWORD,
     mov   hWnd,eax                          ;保存窗口句柄
 
 	;载入图片
-	INVOKE LoadImage, NULL, ADDR BmpBackgroundFilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	INVOKE LoadBitmap, hInstance, 101
 	mov BmpBackground, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber0FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber0, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber2FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber2, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber4FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber4, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber8FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber8, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber16FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber16, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber32FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber32, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber64FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber64, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber128FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber128, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber256FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber256, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber512FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber512, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber1024FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber1024, eax
-	INVOKE LoadImage, NULL, ADDR BmpNumber2048FilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
-	mov BmpNumber2048, eax
-	INVOKE LoadImage, NULL, ADDR BmpBrickPath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+	INVOKE LoadBitmap, hInstance, 115
 	mov BmpBrick, eax
+	INVOKE LoadBitmap, hInstance, 116
+	mov BmpNumber0, eax
+	INVOKE LoadBitmap, hInstance, 117
+	mov BmpNumber2, eax
+	INVOKE LoadBitmap, hInstance, 118
+	mov BmpNumber4, eax
+	INVOKE LoadBitmap, hInstance, 119
+	mov BmpNumber8, eax
+	INVOKE LoadBitmap, hInstance, 120
+	mov BmpNumber16, eax
+	INVOKE LoadBitmap, hInstance, 121
+	mov BmpNumber32, eax
+	INVOKE LoadBitmap, hInstance, 122
+	mov BmpNumber64, eax
+	INVOKE LoadBitmap, hInstance, 123
+	mov BmpNumber128, eax
+	INVOKE LoadBitmap, hInstance, 124
+	mov BmpNumber256, eax
+	INVOKE LoadBitmap, hInstance, 125
+	mov BmpNumber512, eax
+	INVOKE LoadBitmap, hInstance, 129
+	mov BmpNumber1024, eax
+	INVOKE LoadBitmap, hInstance, 128
+	mov BmpNumber2048, eax
 
 	mov eax, BmpBrick
 	mov CurrentBmp, eax
@@ -148,27 +148,26 @@ MessageLoop:
 Exit_Program:      
         INVOKE ExitProcess, 0      
 WinMain endp      
-; ===============================================   
 
-; ===============================================
-PlayMp3File proc hWin:DWORD,NameOfFile:DWORD
+;播放音乐函数
+PlayMp3File PROC hWin:DWORD,NameOfFile:DWORD
 
-      LOCAL mciOpenParms:MCI_OPEN_PARMS,mciPlayParms:MCI_PLAY_PARMS
+	LOCAL mciOpenParms:MCI_OPEN_PARMS,mciPlayParms:MCI_PLAY_PARMS
 
-            mov eax,hWin        
-            mov mciPlayParms.dwCallback,eax
-            mov eax,OFFSET Mp3Device
-            mov mciOpenParms.lpstrDeviceType,eax
-            mov eax,NameOfFile
-            mov mciOpenParms.lpstrElementName,eax
-            invoke mciSendCommand,0,MCI_OPEN,MCI_OPEN_TYPE or MCI_OPEN_ELEMENT,ADDR mciOpenParms
-            mov eax,mciOpenParms.wDeviceID
-            mov Mp3DeviceID,eax
-            invoke mciSendCommand,Mp3DeviceID,MCI_PLAY,MCI_NOTIFY,ADDR mciPlayParms
-            ret  
+	mov eax,hWin        
+	mov mciPlayParms.dwCallback,eax
+	mov eax,OFFSET Mp3Device
+	mov mciOpenParms.lpstrDeviceType,eax
+	mov eax,NameOfFile
+	mov mciOpenParms.lpstrElementName,eax
+	INVOKE mciSendCommand,0,MCI_OPEN,MCI_OPEN_TYPE or MCI_OPEN_ELEMENT,ADDR mciOpenParms
+	mov eax,mciOpenParms.wDeviceID
+	mov Mp3DeviceID,eax
+	invoke mciSendCommand,Mp3DeviceID,MCI_PLAY,MCI_NOTIFY,ADDR mciPlayParms
+	ret  
 
-PlayMp3File endp
-; ===============================================
+PlayMp3File ENDP
+
 
 ;消息处理函数   
 WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD      
@@ -263,11 +262,8 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
         mov PlayFlag,0
 	.ELSEIF wParam == MM_MCINOTIFY
-            ;-----------------------------------------------------
-            ; Sent when media play completes and closes mp3 device
-            ;-----------------------------------------------------
-            invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
-            mov PlayFlag,0
+        invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
+        mov PlayFlag,0
 	.ELSE
 		mov eax,0 
 	.ENDIF
@@ -277,8 +273,12 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	INVOKE CheckMap
 	.IF eax == MAP_FAIL
 		INVOKE MessageBox, 0, ADDR FailMsg, 0, MB_OK
+		mov eax, 4
+		INVOKE InitMap
 	.ELSEIF eax == MAP_WIN
 		INVOKE MessageBox, 0, ADDR WinMsg, 0, MB_OK
+		mov eax, 4
+		INVOKE InitMap
 	.ENDIF
 	INVOKE InvalidateRect, hWin, NULL, FALSE
 	ret
@@ -394,6 +394,7 @@ DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	INVOKE StretchBlt, hDC, xPos, yPos, SquareWidth, SquareHeight, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
 	ret
 DrawSquare ENDP
+
 DrawNextNumberText PROC
 	LOCAL textRect: RECT
 	LOCAL hfont: HFONT
