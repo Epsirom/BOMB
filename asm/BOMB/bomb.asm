@@ -241,18 +241,24 @@ ErrorHandler ENDP
  
 ;键盘事件
 KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	LOCAL qlen: DWORD
+	mov qlen, 0
 	.IF wParam == VK_UP
 		mov eax, DIR_UP
 		INVOKE DoMove
+		mov qlen, eax
 	.ELSEIF wParam == VK_DOWN
 		mov eax, DIR_DOWN
 		INVOKE DoMove
+		mov qlen, eax
 	.ELSEIF wParam == VK_LEFT
 		mov eax, DIR_LEFT
 		INVOKE DoMove
+		mov qlen, eax
 	.ELSEIF wParam == VK_RIGHT
 		mov eax, DIR_RIGHT
 		INVOKE DoMove
+		mov qlen, eax
 	.ELSEIF wParam == 80 ;press VK 'P' to Play mp3
 		.IF PlayFlag == 0
             mov PlayFlag,1  
@@ -263,24 +269,25 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
         mov PlayFlag,0
 	.ELSEIF wParam == MM_MCINOTIFY
         invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
-        mov PlayFlag,0
-	.ELSE
-		mov eax,0 
+        mov PlayFlag,0 
 	.ENDIF
-	.IF eax > 0
+	.IF qlen > 0
+		INVOKE MoveAnimateProc, qlen, wParam
 		INVOKE AddNum
 	.ENDIF
+	INVOKE InvalidateRect, hWin, NULL, FALSE
 	INVOKE CheckMap
 	.IF eax == MAP_FAIL
-		INVOKE MessageBox, 0, ADDR FailMsg, 0, MB_OK
+		INVOKE MessageBox, 0, ADDR FailMsg, ADDR FailMsgTitle, MB_OK
 		mov eax, 4
 		INVOKE InitMap
+		INVOKE InvalidateRect, hWin, NULL, FALSE
 	.ELSEIF eax == MAP_WIN
-		INVOKE MessageBox, 0, ADDR WinMsg, 0, MB_OK
+		INVOKE MessageBox, 0, ADDR WinMsg, ADDR WinMsgTitle, MB_OK
 		mov eax, 4
 		INVOKE InitMap
+		INVOKE InvalidateRect, hWin, NULL, FALSE
 	.ENDIF
-	INVOKE InvalidateRect, hWin, NULL, FALSE
 	ret
 KeyDownProc ENDP
 
@@ -359,13 +366,12 @@ PaintProc PROC hWin:DWORD
 	.ENDW
 
 	INVOKE DrawNextNumberText
-
     INVOKE SelectObject,hDC,hOld
-
     INVOKE DeleteDC,memDC
     ret
 PaintProc ENDP
 
+;画方块
 DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	LOCAL xPos: DWORD
 	LOCAL yPos: DWORD
@@ -430,5 +436,10 @@ DrawNextNumberText PROC
 	INVOKE StretchBlt, hDC, 410, 60, 40, 40, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
 	ret
 DrawNextNumberText ENDP
+
+MoveAnimateProc PROC qlen:DWORD, movedir:DWORD
+	
+	ret
+MoveAnimateProc ENDP
 
 end start 

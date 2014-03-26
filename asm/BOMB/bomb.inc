@@ -10,6 +10,7 @@ IFNDEF BOMB_INC
 	DrawSquare PROTO :DWORD,:DWORD,:DWORD
 	DrawNextNumberText PROTO
 	PlayMp3File PROTO :DWORD,:DWORD
+	MoveAnimateProc PROTO :DWORD,:DWORD
 
 .data
 	MENU_ABOUTAUTHOR equ 1000
@@ -18,6 +19,8 @@ IFNDEF BOMB_INC
 	FontName db "Arial", 0
 	WinMsg db "You Win!", 0
 	FailMsg db "You Lose!", 0
+	WinMsgTitle db "成功", 0
+	FailMsgTitle db "失败", 0
 
 	;窗体参数
 	WndWidth dd 568
