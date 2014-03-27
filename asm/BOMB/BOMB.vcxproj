@@ -13,10 +13,12 @@
   <ItemGroup>
     <MASM Include="bomb.asm" />
     <MASM Include="bomb_core.asm" />
+    <MASM Include="serialization.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bomb.inc" />
     <None Include="bomb_core.inc" />
+    <None Include="serialization.inc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="images\bg485.bmp" />

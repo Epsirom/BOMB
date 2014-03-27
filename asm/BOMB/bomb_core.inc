@@ -70,6 +70,7 @@ ENDM
 
 .code
 InitMap PROTO
+ResetStat PROTO
 AddNum PROTO
 CheckMap PROTO
 DoMove PROTO

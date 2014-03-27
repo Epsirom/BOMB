@@ -17,12 +17,18 @@
     <MASM Include="bomb_core.asm">
       <Filter>asm</Filter>
     </MASM>
+    <MASM Include="serialization.asm">
+      <Filter>asm</Filter>
+    </MASM>
   </ItemGroup>
   <ItemGroup>
     <None Include="bomb.inc">
       <Filter>inc</Filter>
     </None>
     <None Include="bomb_core.inc">
+      <Filter>inc</Filter>
+    </None>
+    <None Include="serialization.inc">
       <Filter>inc</Filter>
     </None>
   </ItemGroup>

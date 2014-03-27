@@ -63,6 +63,28 @@ InitMap PROC USES eax ebx ecx edx
 InitMap ENDP
 
 
+ResetStat PROC USES eax ebx ecx edx
+	mov emptyBlocks, 0
+	mov numberBlocks, 0
+	mov ecx, mapSize
+	.WHILE ecx != 0
+		dec ecx
+		mov edx, mapSize
+		.WHILE edx != 0
+			dec edx
+			mov eax, -1
+			MapAt ecx, edx
+			.IF eax == 0
+				inc emptyBlocks
+			.ELSEIF eax < NEG_START
+				inc numberBlocks
+			.ENDIF
+		.ENDW
+	.ENDW
+	ret
+ResetStat ENDP
+
+
 AddNum PROC USES ebx ecx edx esi edi
 	mov ebx, emptyBlocks
 	.IF ebx <= 0

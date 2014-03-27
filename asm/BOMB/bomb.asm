@@ -19,8 +19,8 @@ INCLUDE kernel32.inc
 INCLUDE gdi32.inc
 INCLUDE comctl32.inc
 INCLUDE winmm.inc 
-               
-INCLUDE bomb_core.inc
+        
+INCLUDE serialization.inc
 INCLUDE bomb.inc
 
 .data      
@@ -125,8 +125,11 @@ WinMain PROC hInst:DWORD,
 	mov CurrentBmp, eax
 	
 	;初始化地图
-	mov eax, 4
-	INVOKE InitMap
+	INVOKE LoadSerialization
+	.IF eax == 0
+		mov eax, 4
+		INVOKE InitMap
+	.ENDIF
 
     INVOKE ShowWindow,hWnd,SW_SHOWNORMAL    ;     
     INVOKE UpdateWindow,hWnd 
@@ -145,7 +148,7 @@ MessageLoop:
     
 	;关闭时钟
 	INVOKE KillTimer, hWnd, 1
-Exit_Program:      
+Exit_Program:
         INVOKE ExitProcess, 0      
 WinMain endp      
 
@@ -259,14 +262,19 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		mov eax, DIR_RIGHT
 		INVOKE DoMove
 		mov qlen, eax
-	.ELSEIF wParam == 80 ;press VK 'P' to Play mp3
+	.ELSEIF wParam == 78 ;press VK 'N' to start a new game
+		mov eax, 4
+		INVOKE InitMap
+	.ELSEIF wParam == 83 ;press VK 'S' to save game
+		INVOKE SaveSerialization
+	.ELSEIF wParam == 80 ;press VK 'P' to Play mp3, press again to stop mp3
 		.IF PlayFlag == 0
             mov PlayFlag,1  
             invoke PlayMp3File,hWin,ADDR MusicFileName
+		.ELSE
+			invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
+			mov PlayFlag,0
         .ENDIF
-	.ELSEIF wParam == 83 ;press VK 'P' to Stop mp3
-		invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
-        mov PlayFlag,0
 	.ELSEIF wParam == MM_MCINOTIFY
         invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
         mov PlayFlag,0 
