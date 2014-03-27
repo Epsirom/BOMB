@@ -16,5 +16,6 @@
 *.suo
 *.sdf
 *.opensdf
+*.aps
 Debug
 Release
