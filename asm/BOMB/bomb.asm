@@ -578,6 +578,7 @@ PaintProc PROC hWin:DWORD
     INVOKE SelectObject,hDC,hOld
     INVOKE DeleteDC,memDC
 	INVOKE DeleteDC,imgDC
+	INVOKE DeleteObject, hBitmap
     ret
 PaintProc ENDP
 
