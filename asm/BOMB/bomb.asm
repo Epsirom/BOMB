@@ -34,7 +34,8 @@ INCLUDE bomb.inc
     MenuAbout       db "Help", 0   
     MenuAboutAuthor db "About Author", 0   
     Author          db "Author:wcc",0dh,"Date:   19/03/2014",0   
-
+	
+	keyLock         db 0; 0:unlock, 1:lock
 	aniFlag         db 0
 	moveticks       dd 0
 	combineticks    dd 0
@@ -43,6 +44,9 @@ INCLUDE bomb.inc
 	GameRect        RECT <>
 	BombNumRect     RECT <>
 	qlen			dd 0
+	newNum			dd 0
+	newNumPosX		dd 0
+	newNumPosY		dd 0
 	oldmap SDWORD MAP_SIZE DUP(-1)
 	REPEAT MAP_SIZE - 1
 		SDWORD MAP_SIZE DUP(-1)
@@ -227,7 +231,6 @@ PlayMp3File PROC hWin:DWORD,NameOfFile:DWORD
 
 PlayMp3File ENDP
 
-
 ;消息处理函数   
 WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD      
     LOCAL hPopMenu      ;一级菜单句柄
@@ -300,6 +303,9 @@ ErrorHandler ENDP
  
 ;键盘事件
 KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	.IF keyLock == 1
+		ret
+	.ENDIF
 	mov qlen, 0
 	.IF wParam == VK_UP
 		mov eax, DIR_UP
@@ -338,26 +344,8 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
         invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
         mov PlayFlag,0 
 	.ENDIF
-	.IF qlen > 0
-		INVOKE AddNum
-		;mov moveticks, 0
-		;mov aniFlag, 1 ;开始动画
-	.ENDIF
 	mov aniFlag, 1 ;开始动画
-	INVOKE CheckMap
-	.IF eax == MAP_FAIL
-		INVOKE MessageBox, 0, ADDR FailMsg, ADDR FailMsgTitle, MB_OK
-		mov eax, 4
-		INVOKE InitMap
-		INVOKE CopyMap
-		INVOKE InvalidateRect, hWin, NULL, FALSE
-	.ELSEIF eax == MAP_WIN
-		INVOKE MessageBox, 0, ADDR WinMsg, ADDR WinMsgTitle, MB_OK
-		mov eax, 4
-		INVOKE InitMap
-		INVOKE CopyMap
-		INVOKE InvalidateRect, hWin, NULL, FALSE
-	.ENDIF
+	mov keyLock, 1
 	ret
 KeyDownProc ENDP
 
@@ -367,16 +355,15 @@ KeyUpProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
 KeyUpProc ENDP
 
 ;时钟事件
-TimerProc PROC USES ebx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
+TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	.IF aniFlag == 1
 		;move
 		inc moveticks
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF moveticks > MoveTime
-			
+			mov moveticks, 0
 			mov bl, 2
 			mov aniFlag, bl
-			mov moveticks, 0
 			INVOKE CopyMap
 			INVOKE InvalidateRect, hWin, ADDR BombNumRect, FALSE
 		.ENDIF
@@ -385,27 +372,65 @@ TimerProc PROC USES ebx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		inc combineticks
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF combineticks > CombineTime
-			mov bl, 0
-			mov aniFlag, bl
 			mov combineticks, 0
+			.IF qlen > 0
+				INVOKE AddNum
+				mov edx, eax
+				and eax, 01h
+				.IF eax == 0
+					mov eax, 2
+				.ELSE
+					mov eax, 4
+				.ENDIF
+				mov newNum, eax
+				mov eax, edx
+				shr eax, 1
+				and eax, 001Fh
+				mov newNumPosX, eax
+				mov eax, edx
+				shr eax, 6
+				and eax, 001Fh
+				mov newNumPosY, eax
+				mov bl, 4
+			.ELSE
+				mov bl, 0
+				mov keyLock, 0
+			.ENDIF
+			mov aniFlag, bl
 		.ENDIF
 	.ELSEIF aniFlag == 3
 		;explode
 		inc explodeticks
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF explodeticks > ExplodeTime
+			mov explodeticks, 0
 			mov bl, 0
 			mov aniFlag, bl
-			mov explodeticks, 0
 		.ENDIF
 	.ELSEIF aniFlag == 4
 		;show new
 		inc showticks
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
-		.IF showticks > ShowTime
+		.IF showticks > ShowNewTime
+			mov showticks, 0
 			mov bl, 0
 			mov aniFlag, bl
-			mov showticks, 0
+			mov keyLock, 0
+			INVOKE CopyMap
+			INVOKE CheckMap
+			.IF eax == MAP_FAIL
+				INVOKE MessageBox, 0, ADDR FailMsg, ADDR FailMsgTitle, MB_OK
+				mov eax, 4
+				INVOKE InitMap
+				INVOKE CopyMap
+				INVOKE InvalidateRect, hWin, NULL, FALSE
+			.ELSEIF eax == MAP_WIN
+				INVOKE MessageBox, 0, ADDR WinMsg, ADDR WinMsgTitle, MB_OK
+				mov eax, 4
+				INVOKE InitMap
+				INVOKE CopyMap
+				INVOKE InvalidateRect, hWin, NULL, FALSE
+			.ENDIF
 		.ENDIF
 	.ENDIF
 	ret
@@ -532,6 +557,20 @@ PaintProc PROC hWin:DWORD
 		inc xIndex
 		mov yIndex, 0
 	.ENDW
+	;画新添加的方块
+	.IF showticks > 0
+		mov eax, 50
+		mul showticks
+		mov edx, 0
+		mov ebx, ShowNewTime
+		div ebx
+		add eax, 50
+		mov scale, eax
+		mov ecx, newNum
+		SetCurrentBmp ecx
+		mov CurrentBmp, eax
+		INVOKE DrawSquare, newNumPosY, newNumPosX, CurrentBmp, movedis, scale
+	.ENDIF
 		
 	INVOKE DrawNextNumberText
 

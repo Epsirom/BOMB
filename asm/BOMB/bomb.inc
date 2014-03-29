@@ -21,9 +21,9 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 .data
 	POSITIVE_MAX equ 80000000h
 	MENU_ABOUTAUTHOR equ 1000
-	MoveTime equ 8
-	CombineTime equ 8
-	ShowTime equ 5
+	MoveTime equ 6
+	CombineTime equ 6
+	ShowNewTime equ 6
 	ExplodeTime equ 5
 	Interval equ 5
 
