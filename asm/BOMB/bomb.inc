@@ -17,6 +17,7 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	InitRect PROTO
 	GetMoveDis PROTO :DWORD,:DWORD
 	CheckCombine PROTO :DWORD,:DWORD
+	CheckExplode PROTO :DWORD,:DWORD
 
 .data
 	POSITIVE_MAX equ 80000000h
@@ -78,6 +79,7 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	BmpNumber512 dd ?
 	BmpNumber1024 dd ?
 	BmpNumber2048 dd ?
+	BmpBomb dd ?
 
 	Mp3DeviceID dd 0
 	PlayFlag    dd 0
@@ -91,6 +93,8 @@ SetCurrentBmp MACRO num:REQ
 		mov eax, BmpBrick
 	.ELSEIF num == 0
 		mov eax, BmpNumber0
+	.ELSEIF num == 1
+		mov eax, BmpBomb
 	.ELSEIF num == 2
 		mov eax, BmpNumber2
 	.ELSEIF num == 4

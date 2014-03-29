@@ -135,6 +135,10 @@ WinMain PROC hInst:DWORD,
 	mov BmpNumber1024, eax
 	INVOKE LoadBitmap, hInstance, 128
 	mov BmpNumber2048, eax
+	INVOKE LoadBitmap, hInstance, 128
+	mov BmpNumber2048, eax
+	INVOKE LoadBitmap, hInstance, 133
+	mov BmpBomb, eax
 
 	;初始化rect
 	INVOKE InitRect
@@ -391,7 +395,7 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 				shr eax, 6
 				and eax, 001Fh
 				mov newNumPosY, eax
-				mov bl, 4
+				mov bl, 3
 			.ELSE
 				mov bl, 0
 				mov keyLock, 0
@@ -404,7 +408,7 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF explodeticks > ExplodeTime
 			mov explodeticks, 0
-			mov bl, 0
+			mov bl, 4
 			mov aniFlag, bl
 		.ENDIF
 	.ELSEIF aniFlag == 4
@@ -546,6 +550,21 @@ PaintProc PROC hWin:DWORD
 						add eax, 50
 						mov scale, eax
 					.ENDIF
+				.ELSEIF explodeticks > 0
+					INVOKE CheckExplode, yIndex, xIndex
+					.IF eax == 1
+						mov eax, 50
+						mul showticks
+						mov edx, 0
+						mov ebx, ShowNewTime
+						div ebx
+						add eax, 50
+						mov scale, eax
+						mov ecx, 1
+						SetCurrentBmp ecx
+						mov CurrentBmp, eax
+						INVOKE DrawSquare, xIndex, yIndex, CurrentBmp, movedis, scale
+					.ENDIF
 				.ENDIF
 				SetCurrentBmp ecx
 				mov CurrentBmp, eax
@@ -557,6 +576,7 @@ PaintProc PROC hWin:DWORD
 		inc xIndex
 		mov yIndex, 0
 	.ENDW
+	
 	;画新添加的方块
 	.IF showticks > 0
 		mov eax, 50
@@ -638,6 +658,33 @@ CheckCombine PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
 	mov eax, 0
 	ret
 CheckCombine ENDP
+
+;检查是否是爆炸
+CheckExplode PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
+	mov ebx, 0
+	mov edi, OFFSET resultQueue
+	.WHILE ebx < qlen
+		mov eax, [edi]
+		mov edx, eax
+		shr eax, 2
+		and eax, 001Fh
+		.IF eax == xIndex
+			mov eax, edx
+			shr eax, 7
+			and eax, 001Fh
+			.IF eax == yIndex
+				mov eax, edx
+				and eax, 0003h
+				shr eax, 1
+				ret
+			.ENDIF
+		.ENDIF 
+		add edi, TYPE resultQueue
+		inc ebx
+	.ENDW
+	mov eax, 0
+	ret
+CheckExplode ENDP
 
 ;画方块
 DrawSquare PROC USES eax ebx ecx edx xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD, movedis:DWORD, scale:DWORD
