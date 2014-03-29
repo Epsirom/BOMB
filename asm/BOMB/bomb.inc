@@ -1,19 +1,32 @@
 IFNDEF BOMB_INC
 
+MAX_MAP_SIZE = 20
+MAP_SIZE = MAX_MAP_SIZE + 1
+
 ;local prototye
+	CopyMap PROTO
 	WinMain PROTO :DWORD,:DWORD,:DWORD,:DWORD      
 	WndProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	PaintProc PROTO :DWORD    
 	KeyDownProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	KeyUpProc PROTO :DWORD,:DWORD,:DWORD
-    TimerProc PROTO :DWORD,:DWORD,:DWORD
-	DrawSquare PROTO :DWORD,:DWORD,:DWORD
+    TimerProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
+	DrawSquare PROTO :DWORD,:DWORD,:DWORD,:DWORD,:DWORD
 	DrawNextNumberText PROTO
 	PlayMp3File PROTO :DWORD,:DWORD
-	MoveAnimateProc PROTO :DWORD,:DWORD
+	InitRect PROTO
+	GetMoveDis PROTO :DWORD,:DWORD
+	CheckCombine PROTO :DWORD,:DWORD
 
 .data
+	POSITIVE_MAX equ 80000000h
 	MENU_ABOUTAUTHOR equ 1000
+	MoveTime equ 8
+	CombineTime equ 8
+	ShowTime equ 5
+	ExplodeTime equ 5
+	Interval equ 5
+
 	GameTitle db "BOMB!",0
 	NextNumberText db " Next Bomb Number:", 0
 	FontName db "Arial", 0
@@ -21,6 +34,8 @@ IFNDEF BOMB_INC
 	FailMsg db "You Lose!", 0
 	WinMsgTitle db "成功", 0
 	FailMsgTitle db "失败", 0
+	MoveDir dd 0
+	EXTERNDEF oldmap:SDWORD
 
 	;窗体参数
 	WndWidth dd 568
@@ -42,7 +57,9 @@ IFNDEF BOMB_INC
 
 	;窗口句柄
 	memDC dd 0
+	imgDC dd 0
 	hDC dd 0
+	hBitmap HBITMAP ?
 	rect RECT <>
 
 	;位图句柄
@@ -62,23 +79,6 @@ IFNDEF BOMB_INC
 	BmpNumber1024 dd ?
 	BmpNumber2048 dd ?
 
-	;位图文件路径
-	BmpBackgroundFilePath BYTE 'images/bg485.bmp', 0
-	BmpIconFilePath BYTE 'images/icons/icon.ico', 0
-	BmpBrickPath BYTE 'images/brick107.bmp', 0
-	BmpNumber0FilePath BYTE 'images/pile107-0.bmp', 0
-	BmpNumber2FilePath BYTE 'images/pile107-2.bmp', 0
-	BmpNumber4FilePath BYTE 'images/pile107-4.bmp', 0
-	BmpNumber8FilePath BYTE 'images/pile107-8.bmp', 0
-	BmpNumber16FilePath BYTE 'images/pile107-16.bmp', 0
-	BmpNumber32FilePath BYTE 'images/pile107-32.bmp', 0
-	BmpNumber64FilePath BYTE 'images/pile107-64.bmp', 0
-	BmpNumber128FilePath BYTE 'images/pile107-128.bmp', 0
-	BmpNumber256FilePath BYTE 'images/pile107-256.bmp', 0
-	BmpNumber512FilePath BYTE 'images/pile107-512.bmp', 0
-	BmpNumber1024FilePath BYTE 'images/pile107-1024.bmp', 0
-	BmpNumber2048FilePath BYTE 'images/pile107-2048.bmp', 0
-
 	Mp3DeviceID dd 0
 	PlayFlag    dd 0
 	Mp3Files    db "*.mp3",125 dup (0)
@@ -87,7 +87,7 @@ IFNDEF BOMB_INC
 	MusicFileName db 'music.mp3', 0
 ;===================Macros====================
 SetCurrentBmp MACRO num:REQ
-	.IF num >= 80000000h
+	.IF num >= POSITIVE_MAX
 		mov eax, BmpBrick
 	.ELSEIF num == 0
 		mov eax, BmpNumber0
@@ -115,5 +115,30 @@ SetCurrentBmp MACRO num:REQ
 		mov eax, BmpNumber2048
 	.ENDIF
 ENDM
+
+; uses ebx
+; return eax
+OldMapAt MACRO x:REQ, y:REQ
+	.IF (x == -1) || (y == -1) || (x >= mapSize) || (y >= mapSize)
+		mov eax, -1
+	.ELSE
+	mov ebx, mapRowSize
+	imul ebx, x
+	mov eax, oldmap[ebx + y * TYPE map]
+	.ENDIF
+ENDM
+
+; uses ebx
+SetOldMapAt MACRO x:REQ, y:REQ, val:REQ
+	mov ebx, mapRowSize
+	imul ebx, x
+	mov oldmap[ebx + y * TYPE map], val
+ENDM
+
+AppendQueue MACRO
+	mov [edi], eax
+	add edi, TYPE resultQueue
+ENDM
+
 
 ENDIF

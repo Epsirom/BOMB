@@ -3,8 +3,6 @@ TITLE main.asm
     .model flat,stdcall      
     option casemap:none    
 
-
-
 INCLUDELIB kernel32.lib
 INCLUDELIB user32.lib
 INCLUDELIB gdi32.lib
@@ -36,6 +34,19 @@ INCLUDE bomb.inc
     MenuAbout       db "Help", 0   
     MenuAboutAuthor db "About Author", 0   
     Author          db "Author:wcc",0dh,"Date:   19/03/2014",0   
+
+	aniFlag         db 0
+	moveticks       dd 0
+	combineticks    dd 0
+	explodeticks    dd 0
+	showticks       dd 0
+	GameRect        RECT <>
+	BombNumRect     RECT <>
+	qlen			dd 0
+	oldmap SDWORD MAP_SIZE DUP(-1)
+	REPEAT MAP_SIZE - 1
+		SDWORD MAP_SIZE DUP(-1)
+	ENDM
 ; ===============================================      
 .code      
 start:      
@@ -121,6 +132,9 @@ WinMain PROC hInst:DWORD,
 	INVOKE LoadBitmap, hInstance, 128
 	mov BmpNumber2048, eax
 
+	;初始化rect
+	INVOKE InitRect
+
 	mov eax, BmpBrick
 	mov CurrentBmp, eax
 	
@@ -129,13 +143,13 @@ WinMain PROC hInst:DWORD,
 	.IF eax == 0
 		mov eax, 4
 		INVOKE InitMap
+		INVOKE CopyMap
 	.ENDIF
 
     INVOKE ShowWindow,hWnd,SW_SHOWNORMAL    ;     
     INVOKE UpdateWindow,hWnd 
-    INVOKE GetWindowRect, hWnd, ADDR rect
     ;设置时钟
-    INVOKE SetTimer, hWnd, 1, 20, NULL
+    INVOKE SetTimer, hWnd, 1, Interval, NULL
 
 ;开始程序的持续消息处理循环     
 MessageLoop:      
@@ -151,6 +165,48 @@ MessageLoop:
 Exit_Program:
         INVOKE ExitProcess, 0      
 WinMain endp      
+
+InitRect PROC USES ebx
+	;INVOKE GetWindowRect, hWnd, ADDR rect
+	;GameRect
+	mov ebx, ClientOffY
+	mov GameRect.top, ebx
+	add ebx, ClientHeight
+	mov GameRect.bottom, ebx
+	mov ebx, ClientOffX
+	mov GameRect.left, ebx
+	add ebx, ClientWidth
+	mov GameRect.right, 530
+	;BombNumRect
+	mov BombNumRect.top, 30
+	mov BombNumRect.left, 330
+	mov BombNumRect.right, 530
+	mov BombNumRect.bottom, 110
+	;rect
+	mov rect.top, 0
+	mov rect.left, 0
+	mov ebx, WndWidth
+	mov rect.right, ebx
+	mov ebx, WndHeight
+	mov rect.bottom, ebx
+	ret
+InitRect ENDP
+
+; sz in eax
+CopyMap PROC USES eax ebx ecx edx
+	mov ecx, 0
+	mov edx, 0
+	.WHILE ecx < mapSize
+		.WHILE edx < mapSize
+			MapAt ecx, edx
+			SetOldMapAt ecx, edx, eax
+			inc edx
+		.ENDW
+		mov edx, 0
+		inc ecx
+	.ENDW
+	ret
+CopyMap ENDP
 
 ;播放音乐函数
 PlayMp3File PROC hWin:DWORD,NameOfFile:DWORD
@@ -190,7 +246,7 @@ WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
     ;    INVOKE SetMenu, hWin, hMenu     ;设置菜单
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_TIMER
-        INVOKE TimerProc, uMsg, wParam, lParam
+        INVOKE TimerProc, hWin, uMsg, wParam, lParam
 	.ELSEIF uMsg == WM_PAINT
 		INVOKE BeginPaint, hWin, ADDR ps
 		mov hDC, eax
@@ -244,22 +300,25 @@ ErrorHandler ENDP
  
 ;键盘事件
 KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
-	LOCAL qlen: DWORD
 	mov qlen, 0
 	.IF wParam == VK_UP
 		mov eax, DIR_UP
+		mov MoveDir, eax
 		INVOKE DoMove
 		mov qlen, eax
 	.ELSEIF wParam == VK_DOWN
 		mov eax, DIR_DOWN
+		mov MoveDir, eax
 		INVOKE DoMove
 		mov qlen, eax
 	.ELSEIF wParam == VK_LEFT
 		mov eax, DIR_LEFT
+		mov MoveDir, eax
 		INVOKE DoMove
 		mov qlen, eax
 	.ELSEIF wParam == VK_RIGHT
 		mov eax, DIR_RIGHT
+		mov MoveDir, eax
 		INVOKE DoMove
 		mov qlen, eax
 	.ELSEIF wParam == 78 ;press VK 'N' to start a new game
@@ -280,20 +339,23 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
         mov PlayFlag,0 
 	.ENDIF
 	.IF qlen > 0
-		INVOKE MoveAnimateProc, qlen, wParam
 		INVOKE AddNum
+		;mov moveticks, 0
+		;mov aniFlag, 1 ;开始动画
 	.ENDIF
-	INVOKE InvalidateRect, hWin, NULL, FALSE
+	mov aniFlag, 1 ;开始动画
 	INVOKE CheckMap
 	.IF eax == MAP_FAIL
 		INVOKE MessageBox, 0, ADDR FailMsg, ADDR FailMsgTitle, MB_OK
 		mov eax, 4
 		INVOKE InitMap
+		INVOKE CopyMap
 		INVOKE InvalidateRect, hWin, NULL, FALSE
 	.ELSEIF eax == MAP_WIN
 		INVOKE MessageBox, 0, ADDR WinMsg, ADDR WinMsgTitle, MB_OK
 		mov eax, 4
 		INVOKE InitMap
+		INVOKE CopyMap
 		INVOKE InvalidateRect, hWin, NULL, FALSE
 	.ENDIF
 	ret
@@ -305,7 +367,47 @@ KeyUpProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
 KeyUpProc ENDP
 
 ;时钟事件
-TimerProc PROC uMsg:DWORD, wParam:DWORD, lParam:DWORD
+TimerProc PROC USES ebx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	.IF aniFlag == 1
+		;move
+		inc moveticks
+		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
+		.IF moveticks > MoveTime
+			
+			mov bl, 2
+			mov aniFlag, bl
+			mov moveticks, 0
+			INVOKE CopyMap
+			INVOKE InvalidateRect, hWin, ADDR BombNumRect, FALSE
+		.ENDIF
+	.ELSEIF aniFlag == 2
+		;combine
+		inc combineticks
+		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
+		.IF combineticks > CombineTime
+			mov bl, 0
+			mov aniFlag, bl
+			mov combineticks, 0
+		.ENDIF
+	.ELSEIF aniFlag == 3
+		;explode
+		inc explodeticks
+		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
+		.IF explodeticks > ExplodeTime
+			mov bl, 0
+			mov aniFlag, bl
+			mov explodeticks, 0
+		.ENDIF
+	.ELSEIF aniFlag == 4
+		;show new
+		inc showticks
+		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
+		.IF showticks > ShowTime
+			mov bl, 0
+			mov aniFlag, bl
+			mov showticks, 0
+		.ENDIF
+	.ENDIF
 	ret
 TimerProc ENDP
 
@@ -315,17 +417,27 @@ PaintProc PROC hWin:DWORD
 	LOCAL xIndex: DWORD
 	LOCAL yIndex: DWORD
 	LOCAL textRect: RECT
-	LOCAL hfont: HFONT   
+	LOCAL hfont: HFONT
+	LOCAL movedis: DWORD
+	LOCAL scale: DWORD  ;1~100
 
-    INVOKE CreateCompatibleDC,hDC
+	mov movedis, 0
 
+    INVOKE CreateCompatibleDC, hDC
     mov memDC, eax
-    
-    INVOKE SelectObject,memDC,BmpBackground
-    mov hOld, eax
 
+	INVOKE CreateCompatibleDC, hDC
+    mov imgDC, eax
+	INVOKE CreateCompatibleBitmap, hDC, WndWidth, WndHeight
+	mov hBitmap, eax
+    INVOKE SelectObject, memDC, hBitmap
+    mov hOld, eax
+	INVOKE CreateSolidBrush, BgColor
+	INVOKE FillRect, memDC, ADDR rect, eax
+	
 	;画背景
-	INVOKE StretchBlt, hDC, ClientOffX, ClientOffY, ClientWidth, ClientHeight, memDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
+	INVOKE SelectObject, imgDC, BmpBackground
+	INVOKE StretchBlt, memDC, ClientOffX, ClientOffY, ClientWidth, ClientHeight, imgDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
 
 	;画文字
 	INVOKE CreateFont, 80,
@@ -343,46 +455,157 @@ PaintProc PROC hWin:DWORD
                        DEFAULT_PITCH or FF_DONTCARE,
                        OFFSET FontName
     mov hfont, eax
-	INVOKE SetBkMode, hDC, TRANSPARENT
-	INVOKE SetTextColor, hDC, 00656E77h
-	;INVOKE CreateSolidBrush, 008888FFh
-	;INVOKE FillRect,hDC,ADDR textRect,eax
-	INVOKE SelectObject, hDC, hfont
+	INVOKE SetBkMode, memDC, TRANSPARENT
+	INVOKE SetTextColor, memDC, 00656E77h
+	INVOKE SelectObject, memDC, hfont
 	mov textRect.top, 20
 	mov textRect.left, 30
 	mov textRect.right, 300
 	mov textRect.bottom, 200
-	INVOKE DrawText, hDC, ADDR GameTitle, -1, ADDR textRect, DT_VCENTER 
-	;INVOKE BitBlt, hDC, 0, 0, textRect.right, textRect.bottom, memDC, 0, 0, SRCCOPY
+	INVOKE DrawText, memDC, ADDR GameTitle, -1, ADDR textRect, DT_VCENTER 
+	;INVOKE BitBlt, memDC, 0, 0, textRect.right, textRect.bottom, imgDC, 0, 0, SRCCOPY
 
-	;画方块
+	;先画砖块、空格等背景
 	mov xIndex, 0
 	mov yIndex, 0
 	.WHILE xIndex < 4
 		.WHILE yIndex < 4
 			mov ecx, xIndex
 			mov edx, yIndex
-			MapAt edx, ecx
+			OldMapAt edx, ecx
 			mov ecx, eax
-			SetCurrentBmp ecx
-			mov CurrentBmp, eax
-			INVOKE DrawSquare, xIndex, yIndex, CurrentBmp
-			inc yIndex	
+			.IF (ecx >= POSITIVE_MAX) || (ecx == 0)
+				SetCurrentBmp ecx
+				mov CurrentBmp, eax
+				INVOKE DrawSquare, xIndex, yIndex, CurrentBmp, 0, 100
+			.ELSE
+				mov eax, 0
+				SetCurrentBmp eax
+				mov CurrentBmp, eax
+				INVOKE DrawSquare, xIndex, yIndex, CurrentBmp, 0, 100
+			.ENDIF
+			inc yIndex
 		.ENDW
 		inc xIndex
 		mov yIndex, 0
 	.ENDW
-
+	;再画数字
+	mov xIndex, 0
+	mov yIndex, 0
+	.WHILE xIndex < 4
+		.WHILE yIndex < 4
+			mov ecx, xIndex
+			mov edx, yIndex
+			OldMapAt edx, ecx
+			mov ecx, eax
+			.IF (ecx < POSITIVE_MAX) && (ecx > 0)
+				mov scale, 100
+				.IF moveticks > 0
+					INVOKE GetMoveDis, yIndex, xIndex
+					mul moveticks
+					mov ebx, SquareWidth
+					add ebx, Padding
+					mul ebx
+					mov edx, 0
+					mov ebx, MoveTime
+					div ebx
+					mov movedis, eax
+				.ELSEIF combineticks > 0
+					INVOKE CheckCombine, yIndex, xIndex
+					.IF eax == 1
+						mov eax, 50
+						mul combineticks
+						mov edx, 0
+						mov ebx, CombineTime
+						div ebx
+						add eax, 50
+						mov scale, eax
+					.ENDIF
+				.ENDIF
+				SetCurrentBmp ecx
+				mov CurrentBmp, eax
+				INVOKE DrawSquare, xIndex, yIndex, CurrentBmp, movedis, scale
+				mov movedis, 0
+			.ENDIF
+			inc yIndex
+		.ENDW
+		inc xIndex
+		mov yIndex, 0
+	.ENDW
+		
 	INVOKE DrawNextNumberText
+
+	INVOKE BitBlt, hDC, 0, 0, WndWidth, WndHeight, memDC, 0, 0, SRCCOPY 
     INVOKE SelectObject,hDC,hOld
     INVOKE DeleteDC,memDC
+	INVOKE DeleteDC,imgDC
     ret
 PaintProc ENDP
 
+;获取移动距离
+GetMoveDis PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
+	mov ebx, 0
+	mov edi, OFFSET resultQueue
+	.WHILE ebx < qlen
+		mov eax, [edi]
+		mov edx, eax
+		shr eax, 2
+		and eax, 001Fh
+		.IF eax == xIndex
+			mov eax, edx
+			shr eax, 7
+			and eax, 001Fh
+			.IF eax == yIndex
+				mov eax, edx
+				and eax, 0003h
+				.IF eax == 0
+					mov eax, edx
+					shr eax, 12
+					and eax, 001Fh
+					ret
+				.ENDIF
+			.ENDIF
+		.ENDIF 
+		add edi, TYPE resultQueue
+		inc ebx
+	.ENDW
+	mov eax, 0
+	ret
+GetMoveDis ENDP
+
+;检查是否是合成方块
+CheckCombine PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
+	mov ebx, 0
+	mov edi, OFFSET resultQueue
+	.WHILE ebx < qlen
+		mov eax, [edi]
+		mov edx, eax
+		shr eax, 2
+		and eax, 001Fh
+		.IF eax == xIndex
+			mov eax, edx
+			shr eax, 7
+			and eax, 001Fh
+			.IF eax == yIndex
+				mov eax, edx
+				and eax, 0003h
+				ret
+			.ENDIF
+		.ENDIF 
+		add edi, TYPE resultQueue
+		inc ebx
+	.ENDW
+	mov eax, 0
+	ret
+CheckCombine ENDP
+
 ;画方块
-DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
+DrawSquare PROC USES eax ebx ecx edx xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD, movedis:DWORD, scale:DWORD
+	;scale: 1~100->1%~100%
 	LOCAL xPos: DWORD
 	LOCAL yPos: DWORD
+	LOCAL finalWidth: DWORD
+	LOCAL finalHeight: DWORD
 
 	mov eax, xIndex
 	inc eax
@@ -404,21 +627,52 @@ DrawSquare PROC xIndex:DWORD, yIndex:DWORD, bmpObj:DWORD
 	mov eax, ClientOffY
 	add yPos, eax
 
-	INVOKE SelectObject,memDC,bmpObj
-	INVOKE StretchBlt, hDC, xPos, yPos, SquareWidth, SquareHeight, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
+	;缩放
+	mov eax, SquareWidth
+	mul scale
+	mov ebx, 100
+	mov edx, 0
+	div ebx
+	mov finalWidth, eax
+	mov finalHeight, eax
+	mov ecx, SquareWidth
+	sub ecx, eax
+	mov eax, ecx
+	mov ebx, 2
+	mov edx, 0
+	div ebx
+	mov ecx, eax
+	add eax, xPos
+	mov xPos, eax
+	mov eax, ecx
+	add eax, yPos
+	mov yPos, eax
+
+	;移动
+	INVOKE SelectObject,imgDC,bmpObj
+	mov eax, movedis
+	.IF MoveDir == DIR_UP
+		sub yPos, eax
+	.ELSEIF MoveDir == DIR_DOWN
+		add yPos, eax
+	.ELSEIF MoveDir == DIR_LEFT
+		sub xPos, eax
+	.ELSEIF	MoveDir == DIR_RIGHT
+		add xPos, eax
+	.ENDIF
+
+
+
+	INVOKE StretchBlt, memDC, xPos, yPos, finalWidth, finalHeight, imgDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
 	ret
 DrawSquare ENDP
 
+;画下一个爆炸的数字提示
 DrawNextNumberText PROC
-	LOCAL textRect: RECT
 	LOCAL hfont: HFONT
 	
-	mov textRect.top, 30
-	mov textRect.left, 330
-	mov textRect.right, 530
-	mov textRect.bottom, 110
 	INVOKE CreateSolidBrush, 00A0ADBBh
-	INVOKE FillRect,hDC,ADDR textRect,eax
+	INVOKE FillRect,memDC,ADDR BombNumRect,eax
 	INVOKE CreateFont, 22,
                        0,
                        0,
@@ -434,20 +688,15 @@ DrawNextNumberText PROC
                        DEFAULT_PITCH or FF_DONTCARE,
                        OFFSET FontName
     mov hfont, eax
-	INVOKE SetBkMode, hDC, TRANSPARENT
-	INVOKE SetTextColor, hDC, 00EFF8FAh
-	INVOKE SelectObject, hDC, hfont
-	INVOKE DrawText, hDC, ADDR NextNumberText, -1, ADDR textRect, DT_VCENTER 
+	INVOKE SetBkMode, memDC, TRANSPARENT
+	INVOKE SetTextColor, memDC, 00EFF8FAh
+	INVOKE SelectObject, memDC, hfont
+	INVOKE DrawText, memDC, ADDR NextNumberText, -1, ADDR BombNumRect, DT_VCENTER 
 	SetCurrentBmp bombTarget
 	mov CurrentBmp, eax
-	INVOKE SelectObject,memDC, CurrentBmp
-	INVOKE StretchBlt, hDC, 410, 60, 40, 40, memDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
+	INVOKE SelectObject,imgDC, CurrentBmp
+	INVOKE StretchBlt, memDC, 410, 60, 40, 40, imgDC, 0, 0, SquareBmpWidth, SquareBmpHeight, SRCCOPY
 	ret
 DrawNextNumberText ENDP
-
-MoveAnimateProc PROC qlen:DWORD, movedir:DWORD
-	
-	ret
-MoveAnimateProc ENDP
 
 end start 
