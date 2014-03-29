@@ -84,7 +84,8 @@ WinMain PROC hInst:DWORD,
     mov eax,hInst      
     mov wndclass.hInstance,eax      
 	INVOKE CreateSolidBrush,BgColor
-    mov wndclass.hbrBackground,eax      
+	mov bgBrush, eax
+    mov wndclass.hbrBackground, eax      
     mov wndclass.lpszMenuName,0      
     mov wndclass.lpszClassName,OFFSET ClassName      
     INVOKE LoadIcon, hInstance, 130
@@ -92,7 +93,41 @@ WinMain PROC hInst:DWORD,
     INVOKE LoadCursor,0,IDC_ARROW      
     mov wndclass.hCursor,eax      
     mov wndclass.hIconSm,0      
-     
+	;创建画刷、字体
+	INVOKE CreateSolidBrush,TextBgColor
+	mov textBgBrush, eax
+	
+	INVOKE CreateFont, 80,
+					0,
+					0,
+					0,
+					FW_EXTRABOLD,
+					FALSE,
+					FALSE,
+					FALSE,
+					DEFAULT_CHARSET,
+					OUT_TT_PRECIS,
+					CLIP_DEFAULT_PRECIS,
+					CLEARTYPE_QUALITY,
+					DEFAULT_PITCH or FF_DONTCARE,
+					OFFSET FontName
+    mov titleFont, eax
+	INVOKE CreateFont, 22,
+                    0,
+                    0,
+                    0,
+                    FW_EXTRABOLD,
+                    FALSE,
+                    FALSE,
+                    FALSE,
+                    DEFAULT_CHARSET,
+                    OUT_TT_PRECIS,
+                    CLIP_DEFAULT_PRECIS,
+                    CLEARTYPE_QUALITY,
+                    DEFAULT_PITCH or FF_DONTCARE,
+                    OFFSET FontName
+    mov textFont, eax
+
     INVOKE RegisterClassEx,ADDR wndclass    ;注册用户定义的窗口类    
     INVOKE CreateWindowEx,WS_EX_OVERLAPPEDWINDOW, ADDR ClassName,      
                             ADDR WindowName,      
@@ -442,7 +477,6 @@ PaintProc PROC hWin:DWORD
 	LOCAL xIndex: DWORD
 	LOCAL yIndex: DWORD
 	LOCAL textRect: RECT
-	LOCAL hfont: HFONT
 	LOCAL movedis: DWORD
 	LOCAL scale: DWORD  ;1~100
 
@@ -457,32 +491,17 @@ PaintProc PROC hWin:DWORD
 	mov hBitmap, eax
     INVOKE SelectObject, memDC, hBitmap
     mov hOld, eax
-	INVOKE CreateSolidBrush, BgColor
-	INVOKE FillRect, memDC, ADDR rect, eax
+	;INVOKE CreateSolidBrush, BgColor
+	INVOKE FillRect, memDC, ADDR rect, bgBrush
 	
 	;画背景
 	INVOKE SelectObject, imgDC, BmpBackground
 	INVOKE StretchBlt, memDC, ClientOffX, ClientOffY, ClientWidth, ClientHeight, imgDC,0, 0, BgBmpWidth, BgBmpHeight, SRCCOPY
 
 	;画文字
-	INVOKE CreateFont, 80,
-                       0,
-                       0,
-                       0,
-                       FW_EXTRABOLD,
-                       FALSE,
-                       FALSE,
-                       FALSE,
-                       DEFAULT_CHARSET,
-                       OUT_TT_PRECIS,
-                       CLIP_DEFAULT_PRECIS,
-                       CLEARTYPE_QUALITY,
-                       DEFAULT_PITCH or FF_DONTCARE,
-                       OFFSET FontName
-    mov hfont, eax
 	INVOKE SetBkMode, memDC, TRANSPARENT
 	INVOKE SetTextColor, memDC, 00656E77h
-	INVOKE SelectObject, memDC, hfont
+	INVOKE SelectObject, memDC, titleFont
 	mov textRect.top, 20
 	mov textRect.left, 30
 	mov textRect.right, 300
@@ -709,28 +728,12 @@ DrawSquare ENDP
 
 ;画下一个爆炸的数字提示
 DrawNextNumberText PROC
-	LOCAL hfont: HFONT
 	
-	INVOKE CreateSolidBrush, 00A0ADBBh
-	INVOKE FillRect,memDC,ADDR BombNumRect,eax
-	INVOKE CreateFont, 22,
-                       0,
-                       0,
-                       0,
-                       FW_EXTRABOLD,
-                       FALSE,
-                       FALSE,
-                       FALSE,
-                       DEFAULT_CHARSET,
-                       OUT_TT_PRECIS,
-                       CLIP_DEFAULT_PRECIS,
-                       CLEARTYPE_QUALITY,
-                       DEFAULT_PITCH or FF_DONTCARE,
-                       OFFSET FontName
-    mov hfont, eax
+	;INVOKE CreateSolidBrush, 00A0ADBBh
+	INVOKE FillRect,memDC,ADDR BombNumRect,textBgBrush
 	INVOKE SetBkMode, memDC, TRANSPARENT
 	INVOKE SetTextColor, memDC, 00EFF8FAh
-	INVOKE SelectObject, memDC, hfont
+	INVOKE SelectObject, memDC, textFont
 	INVOKE DrawText, memDC, ADDR NextNumberText, -1, ADDR BombNumRect, DT_VCENTER 
 	SetCurrentBmp bombTarget
 	mov CurrentBmp, eax

@@ -45,6 +45,7 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	WndOffX dd 850
 	WndOffY dd 150
 	BgColor dd 00EFF8FAh
+	TextBgColor dd 00A0ADBBh
 	BgBmpWidth dd 485
 	BgBmpHeight dd 485
 	ClientOffX dd 30
@@ -60,6 +61,10 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	imgDC dd 0
 	hDC dd 0
 	hBitmap HBITMAP ?
+	bgBrush HBRUSH ?
+	titleFont HFONT ?
+	textFont HFONT ?
+	textBgBrush HBRUSH ?
 	rect RECT <>
 
 	;Î»Í¼¾ä±ú

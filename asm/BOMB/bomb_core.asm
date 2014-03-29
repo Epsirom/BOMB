@@ -115,7 +115,7 @@ AddNum PROC USES ebx ecx edx esi edi
 	loop FindEmptyLoop1
 	SetMapAndReturn:
 		Rand 10
-		mov eax, 0
+		and eax, 01h
 		mov edi, 2
 		.IF eax >= 9
 			shl edi, 1
