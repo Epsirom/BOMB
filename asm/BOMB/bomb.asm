@@ -44,6 +44,7 @@ INCLUDE bomb.inc
 	GameRect        RECT <>
 	BombNumRect     RECT <>
 	qlen			dd 0
+	hasCombBomb     dd 0
 	newNum			dd 0
 	newNumPosX		dd 0
 	newNumPosY		dd 0
@@ -235,7 +236,7 @@ InitRect PROC USES ebx
 	ret
 InitRect ENDP
 
-; sz in eax
+;复制map到oldMap
 CopyMap PROC USES eax ebx ecx edx
 	mov ecx, 0
 	mov edx, 0
@@ -250,6 +251,43 @@ CopyMap PROC USES eax ebx ecx edx
 	.ENDW
 	ret
 CopyMap ENDP
+
+;复制map不包括爆炸部分
+CopyMapWithoutBomb PROC USES eax ebx ecx edx
+	mov ecx, 0
+	mov edx, 0
+	.WHILE ecx < mapSize
+		.WHILE edx < mapSize
+			MapAt ecx, edx
+			mov ebx, eax
+			.IF eax == 0
+				OldMapAt ecx, edx
+				.IF eax < POSITIVE_MAX
+					INVOKE CheckExplode, ecx, edx
+					.IF eax == 0
+						mov eax, ebx
+						SetOldMapAt ecx, edx, eax
+					.ELSE
+						mov eax, bombTarget
+						push edx
+						mov edx, 0
+						mov ebx, 2
+						div ebx
+						pop edx
+						SetOldMapAt ecx, edx, eax
+					.ENDIF	
+				.ENDIF
+			.ELSE
+				mov eax, ebx
+				SetOldMapAt ecx, edx, eax
+			.ENDIF
+			inc edx
+		.ENDW
+		mov edx, 0
+		inc ecx
+	.ENDW
+	ret
+CopyMapWithoutBomb ENDP
 
 ;播放音乐函数
 PlayMp3File PROC hWin:DWORD,NameOfFile:DWORD
@@ -383,6 +421,10 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
         invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
         mov PlayFlag,0 
 	.ENDIF
+	.IF qlen == 0
+		ret
+	.ENDIF
+	INVOKE CheckHasCombBomb
 	mov aniFlag, 1 ;开始动画
 	mov keyLock, 1
 	ret
@@ -403,51 +445,57 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 			mov moveticks, 0
 			mov bl, 2
 			mov aniFlag, bl
-			INVOKE CopyMap
+			INVOKE CopyMapWithoutBomb
 			INVOKE InvalidateRect, hWin, ADDR BombNumRect, FALSE
 		.ENDIF
 	.ELSEIF aniFlag == 2
 		;combine
+		.IF (combineticks == 0) && (hasCombBomb == 0)
+			mov ebx, CombineTime
+			mov combineticks, ebx
+		.ENDIF 
 		inc combineticks
-		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF combineticks > CombineTime
 			mov combineticks, 0
-			.IF qlen > 0
-				INVOKE AddNum
-				mov edx, eax
-				and eax, 01h
-				.IF eax == 0
-					mov eax, 2
-				.ELSE
-					mov eax, 4
-				.ENDIF
-				mov newNum, eax
-				mov eax, edx
-				shr eax, 1
-				and eax, 001Fh
-				mov newNumPosX, eax
-				mov eax, edx
-				shr eax, 6
-				and eax, 001Fh
-				mov newNumPosY, eax
-				mov bl, 3
-			.ELSE
-				mov bl, 0
-				mov keyLock, 0
-			.ENDIF
+			mov bl, 3
 			mov aniFlag, bl
 		.ENDIF
+		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 	.ELSEIF aniFlag == 3
 		;explode
+		.IF (explodeticks == 0) && (hasCombBomb < 2)
+			mov ebx, ExplodeTime
+			mov explodeticks, ebx
+		.ENDIF
 		inc explodeticks
-		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF explodeticks > ExplodeTime
+			INVOKE CopyMap
 			mov explodeticks, 0
 			mov bl, 4
 			mov aniFlag, bl
 		.ENDIF
+		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 	.ELSEIF aniFlag == 4
 		;show new
+		.IF showticks == 0
+			INVOKE AddNum
+			mov edx, eax
+			and eax, 01h
+			.IF eax == 0
+				mov eax, 2
+			.ELSE
+				mov eax, 4
+			.ENDIF
+			mov newNum, eax
+			mov eax, edx
+			shr eax, 1
+			and eax, 001Fh
+			mov newNumPosX, eax
+			mov eax, edx
+			shr eax, 6
+			and eax, 001Fh
+			mov newNumPosY, eax
+		.ENDIF
 		inc showticks
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF showticks > ShowNewTime
@@ -548,6 +596,7 @@ PaintProc PROC hWin:DWORD
 			mov ecx, eax
 			.IF (ecx < POSITIVE_MAX) && (ecx > 0)
 				mov scale, 100
+				;移动
 				.IF moveticks > 0
 					INVOKE GetMoveDis, yIndex, xIndex
 					mul moveticks
@@ -558,24 +607,44 @@ PaintProc PROC hWin:DWORD
 					mov ebx, MoveTime
 					div ebx
 					mov movedis, eax
+				;合成
 				.ELSEIF combineticks > 0
 					INVOKE CheckCombine, yIndex, xIndex
+					push ecx
 					.IF eax == 1
-						mov eax, 50
-						mul combineticks
 						mov edx, 0
-						mov ebx, CombineTime
-						div ebx
-						add eax, 50
-						mov scale, eax
+						mov eax, CombineTime
+						mov ecx, 2
+						div ecx
+						mov ebx, eax  ;store half of CombineTime in ebx
+						.IF combineticks < ebx
+							mov edx, 0
+							mov eax, 60
+							mul combineticks
+							div ebx
+							mov edx, 110
+							sub edx, eax
+							mov scale, edx
+						.ELSE
+							mov eax, combineticks
+							sub eax, ebx
+							mov ecx, 50
+							mul ecx
+							mov edx, 0
+							div ebx
+							add eax, 50
+							mov scale, eax
+						.ENDIF
 					.ENDIF
+					pop ecx
+				;爆炸
 				.ELSEIF explodeticks > 0
 					INVOKE CheckExplode, yIndex, xIndex
 					.IF eax == 1
 						mov eax, 50
-						mul showticks
+						mul explodeticks
 						mov edx, 0
-						mov ebx, ShowNewTime
+						mov ebx, ExplodeTime
 						div ebx
 						add eax, 50
 						mov scale, eax
@@ -652,6 +721,32 @@ GetMoveDis PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
 	ret
 GetMoveDis ENDP
 
+;检查是否有合成和爆炸动画
+CheckHasCombBomb PROC USES edi ebx eax
+	mov hasCombBomb, 0
+	mov ebx, 0
+	mov edi, OFFSET resultQueue
+	.WHILE ebx < qlen
+		mov eax, [edi]
+		mov edx, eax
+		and eax, 0002h
+		.IF eax == 2
+			mov hasCombBomb, eax
+			ret
+		.ENDIF
+		mov eax, edx
+		and eax, 0001h
+        .IF eax == 1
+			.IF hasCombBomb == 0
+				mov hasCombBomb, eax
+			.ENDIF
+		.ENDIF
+		add edi, TYPE resultQueue
+		inc ebx
+	.ENDW
+	ret
+CheckHasCombBomb ENDP
+
 ;检查是否是合成方块
 CheckCombine PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
 	mov ebx, 0
@@ -668,7 +763,9 @@ CheckCombine PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
 			.IF eax == yIndex
 				mov eax, edx
 				and eax, 0003h
-				ret
+				.IF eax == 01h
+					ret
+				.ENDIF
 			.ENDIF
 		.ENDIF 
 		add edi, TYPE resultQueue
@@ -694,8 +791,10 @@ CheckExplode PROC USES edi ebx edx xIndex:DWORD, yIndex:DWORD
 			.IF eax == yIndex
 				mov eax, edx
 				and eax, 0003h
-				shr eax, 1
-				ret
+				.IF eax == 02h
+					mov eax, 1
+					ret
+				.ENDIF
 			.ENDIF
 		.ENDIF 
 		add edi, TYPE resultQueue

@@ -5,6 +5,7 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 
 ;local prototye
 	CopyMap PROTO
+	CopyMapWithoutBomb PROTO
 	WinMain PROTO :DWORD,:DWORD,:DWORD,:DWORD      
 	WndProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 	PaintProc PROTO :DWORD    
@@ -16,17 +17,18 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	PlayMp3File PROTO :DWORD,:DWORD
 	InitRect PROTO
 	GetMoveDis PROTO :DWORD,:DWORD
+	CheckHasCombBomb PROTO
 	CheckCombine PROTO :DWORD,:DWORD
 	CheckExplode PROTO :DWORD,:DWORD
 
 .data
 	POSITIVE_MAX equ 80000000h
 	MENU_ABOUTAUTHOR equ 1000
-	MoveTime equ 6
-	CombineTime equ 6
-	ShowNewTime equ 6
-	ExplodeTime equ 5
-	Interval equ 5
+	MoveTime equ 8
+	CombineTime equ 12
+	ShowNewTime equ 8
+	ExplodeTime equ 32
+	Interval equ 3
 
 	GameTitle db "BOMB!",0
 	NextNumberText db " Next Bomb Number:", 0
@@ -128,6 +130,7 @@ ENDM
 ; uses ebx
 ; return eax
 OldMapAt MACRO x:REQ, y:REQ
+	push ebx
 	.IF (x == -1) || (y == -1) || (x >= mapSize) || (y >= mapSize)
 		mov eax, -1
 	.ELSE
@@ -135,13 +138,16 @@ OldMapAt MACRO x:REQ, y:REQ
 	imul ebx, x
 	mov eax, oldmap[ebx + y * TYPE map]
 	.ENDIF
+	pop ebx
 ENDM
 
 ; uses ebx
 SetOldMapAt MACRO x:REQ, y:REQ, val:REQ
+	push ebx
 	mov ebx, mapRowSize
 	imul ebx, x
 	mov oldmap[ebx + y * TYPE map], val
+	pop ebx
 ENDM
 
 AppendQueue MACRO
