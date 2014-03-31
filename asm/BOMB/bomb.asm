@@ -187,8 +187,8 @@ WinMain PROC hInst:DWORD,
 	.IF eax == 0
 		mov eax, 4
 		INVOKE InitMap
-		INVOKE CopyMap
 	.ENDIF
+	INVOKE CopyMap
 
     INVOKE ShowWindow,hWnd,SW_SHOWNORMAL    ;     
     INVOKE UpdateWindow,hWnd 
