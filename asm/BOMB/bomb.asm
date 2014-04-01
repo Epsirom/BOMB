@@ -74,7 +74,9 @@ WinMain PROC hInst:DWORD,
 
     LOCAL wndclass:WNDCLASSEX      
     LOCAL msg:MSG      
-
+	LOCAL dwStyle:DWORD
+	LOCAL scrWidth:DWORD
+	LOCAL scrHeight:DWORD
 
 	;初始化窗口
     mov wndclass.cbSize,sizeof WNDCLASSEX      
@@ -129,10 +131,28 @@ WinMain PROC hInst:DWORD,
                     OFFSET FontName
     mov textFont, eax
 
+	mov dwStyle, WS_OVERLAPPEDWINDOW
+	mov eax, WS_SIZEBOX
+	not eax
+	and dwStyle, eax
+	INVOKE GetSystemMetrics,SM_CXSCREEN
+	mov scrWidth, eax
+	INVOKE GetSystemMetrics,SM_CYSCREEN
+	mov scrHeight, eax
+	mov edx, 0
+	mov ebx, 2
+	mov eax, scrWidth
+	sub eax, WndWidth
+	div ebx
+	mov WndOffX, eax
+	mov eax, scrHeight
+	sub eax, WndHeight
+	div ebx
+	mov WndOffY, eax
     INVOKE RegisterClassEx,ADDR wndclass    ;注册用户定义的窗口类    
 	INVOKE CreateWindowEx,WS_EX_OVERLAPPEDWINDOW, ADDR ClassName,      
                             ADDR WindowName,      
-                            WS_OVERLAPPEDWINDOW,      
+                            dwStyle,      
                             WndOffX,WndOffY,WndWidth,WndHeight,      
                             0,0,      
                             hInst,0           ;创建窗口
@@ -218,6 +238,7 @@ Exit_Program:
         INVOKE ExitProcess, 0      
 WinMain endp      
 
+;初始化rect
 InitRect PROC USES ebx
 	;INVOKE GetWindowRect, hWnd, ADDR rect
 	;GameRect
