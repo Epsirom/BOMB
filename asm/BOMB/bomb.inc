@@ -33,10 +33,11 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	GameTitle db "BOMB!",0
 	NextNumberText db " Next Bomb Number:", 0
 	FontName db "Arial", 0
-	WinMsg db "You Win!", 0
-	FailMsg db "You Lose!", 0
-	WinMsgTitle db "成功", 0
-	FailMsgTitle db "失败", 0
+	WinMsg db "YOU WIN!!!", 0
+	FailMsg db "YOU LOSE", 0
+	LoadMsg db "Do you want to read the game progress?", 0
+	QuitMsg db "Do you want to save the game progress?", 0
+	MsgTitle db 0
 	MoveDir dd 0
 	EXTERNDEF oldmap:SDWORD
 
@@ -92,8 +93,12 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	PlayFlag    dd 0
 	Mp3Files    db "*.mp3",125 dup (0)
 	Mp3Device   db "MPEGVideo",0
+	Mp3BombDeviceID dd 0
+	BombSoundTime dd 0
+	Mp3BombDevice   db "MPEGVideo",0
 	;音乐文件路径
 	MusicFileName db 'music.mp3', 0
+	BombFileName db 'bomb.mp3', 0
 ;===================Macros====================
 SetCurrentBmp MACRO num:REQ
 	.IF num >= POSITIVE_MAX

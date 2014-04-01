@@ -130,12 +130,12 @@ WinMain PROC hInst:DWORD,
     mov textFont, eax
 
     INVOKE RegisterClassEx,ADDR wndclass    ;注册用户定义的窗口类    
-    INVOKE CreateWindowEx,WS_EX_OVERLAPPEDWINDOW, ADDR ClassName,      
+	INVOKE CreateWindowEx,WS_EX_OVERLAPPEDWINDOW, ADDR ClassName,      
                             ADDR WindowName,      
                             WS_OVERLAPPEDWINDOW,      
                             WndOffX,WndOffY,WndWidth,WndHeight,      
                             0,0,      
-                            hInst,0           ;创建窗口 
+                            hInst,0           ;创建窗口
 	.IF eax == 0
 		call ErrorHandler
 		jmp Exit_Program
@@ -182,11 +182,19 @@ WinMain PROC hInst:DWORD,
 	mov eax, BmpBrick
 	mov CurrentBmp, eax
 	
-	;初始化地图
+	;载入游戏进度
 	INVOKE LoadSerialization
+	;初始化地图
 	.IF eax == 0
 		mov eax, 4
 		INVOKE InitMap
+	.ELSE
+		;载入游戏进度对话框
+		INVOKE MessageBox, 0, ADDR LoadMsg, ADDR MsgTitle, MB_YESNO
+		.IF eax == 7  ; "No"
+			mov eax, 4
+			INVOKE InitMap
+		.ENDIF
 	.ENDIF
 	INVOKE CopyMap
 
@@ -291,9 +299,7 @@ CopyMapWithoutBomb ENDP
 
 ;播放音乐函数
 PlayMp3File PROC hWin:DWORD,NameOfFile:DWORD
-
 	LOCAL mciOpenParms:MCI_OPEN_PARMS,mciPlayParms:MCI_PLAY_PARMS
-
 	mov eax,hWin        
 	mov mciPlayParms.dwCallback,eax
 	mov eax,OFFSET Mp3Device
@@ -305,8 +311,23 @@ PlayMp3File PROC hWin:DWORD,NameOfFile:DWORD
 	mov Mp3DeviceID,eax
 	invoke mciSendCommand,Mp3DeviceID,MCI_PLAY,MCI_NOTIFY,ADDR mciPlayParms
 	ret  
-
 PlayMp3File ENDP
+
+;播放爆炸声函数
+PlayMp3BombFile PROC hWin:DWORD,NameOfFile:DWORD
+	LOCAL mciOpenParms:MCI_OPEN_PARMS,mciPlayParms:MCI_PLAY_PARMS
+	mov eax,hWin        
+	mov mciPlayParms.dwCallback,eax
+	mov eax,OFFSET Mp3BombDevice
+	mov mciOpenParms.lpstrDeviceType,eax
+	mov eax,NameOfFile
+	mov mciOpenParms.lpstrElementName,eax
+	INVOKE mciSendCommand,0,MCI_OPEN,MCI_OPEN_TYPE or MCI_OPEN_ELEMENT,ADDR mciOpenParms
+	mov eax,mciOpenParms.wDeviceID
+	mov Mp3BombDeviceID,eax
+	invoke mciSendCommand,Mp3BombDeviceID,MCI_PLAY,MCI_NOTIFY,ADDR mciPlayParms
+	ret  
+PlayMp3BombFile ENDP
 
 ;消息处理函数   
 WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD      
@@ -338,6 +359,14 @@ WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_KEYUP
 		INVOKE KeyUpProc, uMsg, wParam, lParam
+		jmp WndProcExit
+	.ELSEIF uMsg == WM_CLOSE
+		;保存游戏进度对话框
+		INVOKE MessageBox, 0, ADDR QuitMsg, ADDR MsgTitle, MB_YESNO
+		.IF eax == 6
+			INVOKE SaveSerialization
+		.ENDIF
+		INVOKE PostQuitMessage,0
 		jmp WndProcExit
     .ELSEIF uMsg == WM_DESTROY   
         INVOKE PostQuitMessage,0        ;退出消息循环
@@ -419,7 +448,7 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
         .ENDIF
 	.ELSEIF wParam == MM_MCINOTIFY
         invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
-        mov PlayFlag,0 
+        mov PlayFlag,0
 	.ENDIF
 	.IF qlen == 0
 		ret
@@ -427,6 +456,10 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	INVOKE CheckHasCombBomb
 	mov aniFlag, 1 ;开始动画
 	mov keyLock, 1
+	.IF hasCombBomb == 2  
+        invoke PlayMp3BombFile,hWin,ADDR BombFileName
+		mov BombSoundTime, 200
+    .ENDIF
 	ret
 KeyDownProc ENDP
 
@@ -437,6 +470,12 @@ KeyUpProc ENDP
 
 ;时钟事件
 TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
+	.IF BombSoundTime > 0
+		dec BombSoundTime
+		.IF BombSoundTime == 0
+			invoke mciSendCommand,Mp3BombDeviceID,MCI_CLOSE,0,0
+		.ENDIF
+	.ENDIF
 	.IF aniFlag == 1
 		;move
 		inc moveticks
@@ -500,19 +539,18 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 		.IF showticks > ShowNewTime
 			mov showticks, 0
-			mov bl, 0
-			mov aniFlag, bl
-			mov keyLock, 0
+			mov aniFlag, 0
+			mov keyLock, 0			
 			INVOKE CopyMap
 			INVOKE CheckMap
 			.IF eax == MAP_FAIL
-				INVOKE MessageBox, 0, ADDR FailMsg, ADDR FailMsgTitle, MB_OK
+				INVOKE MessageBox, 0, ADDR FailMsg, ADDR MsgTitle, MB_OK
 				mov eax, 4
 				INVOKE InitMap
 				INVOKE CopyMap
 				INVOKE InvalidateRect, hWin, NULL, FALSE
 			.ELSEIF eax == MAP_WIN
-				INVOKE MessageBox, 0, ADDR WinMsg, ADDR WinMsgTitle, MB_OK
+				INVOKE MessageBox, 0, ADDR WinMsg, ADDR MsgTitle, MB_OK
 				mov eax, 4
 				INVOKE InitMap
 				INVOKE CopyMap

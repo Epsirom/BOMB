@@ -23,6 +23,8 @@
   <ItemGroup>
     <Image Include="images\bg485.bmp" />
     <Image Include="images\bitmap15.bmp" />
+    <Image Include="images\bomb107.bmp" />
+    <Image Include="images\bomb128.ico" />
     <Image Include="images\brick107.bmp" />
     <Image Include="images\icons\icon.ico" />
     <Image Include="images\pile107-0.bmp" />
@@ -39,7 +41,6 @@
     <Image Include="images\pile107-8.bmp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />
   </ItemGroup>
   <ItemGroup>
