@@ -232,7 +232,6 @@ ExplodeAt MACRO x:REQ, y:REQ
 ENDM
 ; uses eax, ebx
 Explode MACRO
-	shl bombTarget, 1
 	SetMapAt ecx, edx, 0
 	inc emptyBlocks
 	dec numberBlocks
@@ -261,7 +260,7 @@ ENDM
 NEG_START EQU 80000000h
 ; direction in eax
 DoMove PROC USES ebx ecx edx esi edi
-	LOCAL qlen:DWORD, oldVal:DWORD
+	LOCAL qlen:DWORD, oldVal:DWORD, bombFlag:DWORD
 	mov edi, OFFSET resultQueue
 	mov qlen, 0
 	mov oldVal, 0
@@ -313,9 +312,9 @@ DoMove PROC USES ebx ecx edx esi edi
 							inc emptyBlocks
 							
 							pop eax
-							.IF eax >= bombTarget
-								Explode
-							.ENDIF
+							;.IF eax >= bombTarget
+							;	Explode
+							;.ENDIF
 						;.ELSE	; target != 0, and can not combine, just move next to target
 							;inc ecx
 							;SetMapAt ecx, edx, eax
@@ -379,9 +378,9 @@ DoMove PROC USES ebx ecx edx esi edi
 							inc emptyBlocks
 							
 							pop eax
-							.IF eax >= bombTarget
-								Explode
-							.ENDIF
+							;.IF eax >= bombTarget
+							;	Explode
+							;.ENDIF
 						;.ELSE	; target != 0, and can not combine, just move next to target
 							;dec ecx
 							;SetMapAt ecx, edx, eax
@@ -448,9 +447,9 @@ DoMove PROC USES ebx ecx edx esi edi
 							inc emptyBlocks
 							
 							pop eax
-							.IF eax >= bombTarget
-								Explode
-							.ENDIF
+							;.IF eax >= bombTarget
+							;	Explode
+							;.ENDIF
 							
 						;.ELSE	; target != 0, and can not combine, just move next to target
 							;inc edx
@@ -515,9 +514,9 @@ DoMove PROC USES ebx ecx edx esi edi
 							inc emptyBlocks
 							
 							pop eax
-							.IF eax >= bombTarget
-								Explode
-							.ENDIF
+							;.IF eax >= bombTarget
+							;	Explode
+							;.ENDIF
 							
 						;.ELSE	; target != 0, and can not combine, just move next to target
 							;dec edx
@@ -540,6 +539,23 @@ DoMove PROC USES ebx ecx edx esi edi
 		jmp MoveEnd
 		
 	MoveEnd:
+		mov ecx, 0
+		mov bombFlag, 0
+		.WHILE ecx < mapSize
+			mov edx, 0
+			.WHILE edx < mapSize
+				MapAt ecx, edx
+				.IF (eax < NEG_START) && (eax >= bombTarget)
+					Explode
+					mov bombFlag, 1
+				.ENDIF
+				inc edx
+			.ENDW
+			inc ecx
+		.ENDW
+		.IF bombFlag > 0
+			shl bombTarget, 1
+		.ENDIF
 		mov eax, qlen
 		ret
 	
