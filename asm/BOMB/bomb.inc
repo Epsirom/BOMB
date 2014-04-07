@@ -99,7 +99,47 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	;ÒôÀÖÎÄ¼þÂ·¾¶
 	MusicFileName db 'music.mp3', 0
 	BombFileName db 'bomb.mp3', 0
+	
+	;Action Queue
+	AQ_LEN EQU 16
+	AQueue dd AQ_LEN DUP(0)
+	AHead dd 0
+	ATail dd 0
+	ALock dd 0
+	
 ;===================Macros====================
+AppendAQueue MACRO act:REQ
+	push ebx
+	mov ebx, AHead
+	.IF ebx == 0
+		mov ebx, AQ_LEN
+	.ENDIF
+	dec ebx
+	.IF ATail != ebx
+		mov ebx, ATail
+		mov AQueue[ebx * TYPE AQueue], act
+		inc ATail
+		.IF ATail >= AQ_LEN
+			mov ATail, 0
+		.ENDIF
+	.ENDIF
+	pop ebx
+ENDM
+
+ExtractAQueue MACRO
+	mov eax, -1
+	.IF AHead != ATail
+		push ebx
+		mov ebx, AHead
+		mov eax, AQueue[ebx * TYPE AQueue]
+		inc AHead
+		.IF AHead >= AQ_LEN
+			mov AHead, 0
+		.ENDIF
+		pop ebx
+	.ENDIF
+ENDM
+
 SetCurrentBmp MACRO num:REQ
 	.IF num >= POSITIVE_MAX
 		mov eax, BmpBrick
