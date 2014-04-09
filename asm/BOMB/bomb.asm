@@ -20,39 +20,7 @@ INCLUDE winmm.inc
         
 INCLUDE serialization.inc
 INCLUDE bomb.inc
-
-.data      
-    hInstance       dd 0    ;应用程序句柄   
-    hWnd            dd 0    ;窗口句柄   
-    hMenu           dd 0    ;菜单句柄   
-	CommandLine     dd 0
-	CurrentBmp      dd 0
-
-	ErrorTitle      db "Error",0
-    ClassName       db "Demo",0      
-    WindowName      db "BOMB",0      
-    MenuAbout       db "Help", 0   
-    MenuAboutAuthor db "About Author", 0   
-    Author          db "Author:wcc",0dh,"Date:   19/03/2014",0   
-	
-	keyLock         db 0; 0:unlock, 1:lock
-	aniFlag         db 0
-	moveticks       dd 0
-	combineticks    dd 0
-	explodeticks    dd 0
-	showticks       dd 0
-	GameRect        RECT <>
-	BombNumRect     RECT <>
-	qlen			dd 0
-	hasCombBomb     dd 0
-	newNum			dd 0
-	newNumPosX		dd 0
-	newNumPosY		dd 0
-	oldmap SDWORD MAP_SIZE DUP(-1)
-	REPEAT MAP_SIZE - 1
-		SDWORD MAP_SIZE DUP(-1)
-	ENDM
-; ===============================================      
+     
 .code      
 start:      
 	INVOKE GetTickCount
@@ -195,25 +163,38 @@ WinMain PROC hInst:DWORD,
 	mov BmpNumber2048, eax
 	INVOKE LoadBitmap, hInstance, 133
 	mov BmpBomb, eax
+	INVOKE LoadBitmap, hInstance, 134
+	mov BmpNumber4096, eax
+	INVOKE LoadBitmap, hInstance, 135
+	mov BmpNumber8192, eax
+	INVOKE LoadBitmap, hInstance, 136
+	mov BmpNumber16384, eax
+	INVOKE LoadBitmap, hInstance, 137
+	mov BmpNumber32768, eax
+	INVOKE LoadBitmap, hInstance, 138
+	mov BmpNumber65536, eax
 
 	;初始化rect
 	INVOKE InitRect
 
-	mov eax, BmpBrick
-	mov CurrentBmp, eax
-	
+	;初始化动画时间
+	SetOriginTimeLim
+
 	;载入游戏进度
 	INVOKE LoadSerialization
 	;初始化地图
 	.IF eax == 0
-		mov eax, 4
+		mov eax, 5
 		INVOKE InitMap
+		;根据size设置方块大小
+		ResetParameter
 	.ELSE
 		;载入游戏进度对话框
 		INVOKE MessageBox, 0, ADDR LoadMsg, ADDR MsgTitle, MB_YESNO
 		.IF eax == 7  ; "No"
-			mov eax, 4
+			mov eax, 5
 			INVOKE InitMap
+			ResetParameter
 		.ENDIF
 	.ENDIF
 	INVOKE CopyMap
@@ -430,30 +411,21 @@ ErrorHandler ENDP
  
 ;键盘事件
 KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
-	.IF keyLock == 1
+	.IF keyLock == KEYLOCKED
 		ret
 	.ENDIF
-	mov qlen, 0
 	.IF wParam == VK_UP
 		mov eax, DIR_UP
-		mov MoveDir, eax
-		INVOKE DoMove
-		mov qlen, eax
+		AppendAQueue eax
 	.ELSEIF wParam == VK_DOWN
 		mov eax, DIR_DOWN
-		mov MoveDir, eax
-		INVOKE DoMove
-		mov qlen, eax
+		AppendAQueue eax
 	.ELSEIF wParam == VK_LEFT
 		mov eax, DIR_LEFT
-		mov MoveDir, eax
-		INVOKE DoMove
-		mov qlen, eax
+		AppendAQueue eax
 	.ELSEIF wParam == VK_RIGHT
 		mov eax, DIR_RIGHT
-		mov MoveDir, eax
-		INVOKE DoMove
-		mov qlen, eax
+		AppendAQueue eax
 	.ELSEIF wParam == 78 ;press VK 'N' to start a new game
 		mov eax, 4
 		INVOKE InitMap
@@ -471,16 +443,9 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
         invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
         mov PlayFlag,0
 	.ENDIF
-	.IF qlen == 0
-		ret
+	.IF aniLock == ANIUNLOCKED
+		INVOKE TryExtractAction, hWin
 	.ENDIF
-	INVOKE CheckHasCombBomb
-	mov aniFlag, 1 ;开始动画
-	mov keyLock, 1
-	.IF hasCombBomb == 2  
-        invoke PlayMp3BombFile,hWin,ADDR BombFileName
-		mov BombSoundTime, 200
-    .ENDIF
 	ret
 KeyDownProc ENDP
 
@@ -498,10 +463,12 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		.ENDIF
 	.ENDIF
 	.IF aniFlag == 1
-		;move
+		;移动
 		inc moveticks
+		AdjustAniTimeLim
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
-		.IF moveticks > MoveTime
+		mov eax, MoveTime
+		.IF moveticks > eax
 			mov moveticks, 0
 			mov bl, 2
 			mov aniFlag, bl
@@ -509,26 +476,30 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 			INVOKE InvalidateRect, hWin, ADDR BombNumRect, FALSE
 		.ENDIF
 	.ELSEIF aniFlag == 2
-		;combine
+		;结合
 		.IF (combineticks == 0) && (hasCombBomb == 0)
 			mov ebx, CombineTime
 			mov combineticks, ebx
 		.ENDIF 
 		inc combineticks
-		.IF combineticks > CombineTime
+		AdjustAniTimeLim
+		mov eax, CombineTime
+		.IF combineticks > eax
 			mov combineticks, 0
 			mov bl, 3
 			mov aniFlag, bl
 		.ENDIF
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 	.ELSEIF aniFlag == 3
-		;explode
+		;爆炸
 		.IF (explodeticks == 0) && (hasCombBomb < 2)
 			mov ebx, ExplodeTime
 			mov explodeticks, ebx
 		.ENDIF
 		inc explodeticks
-		.IF explodeticks > ExplodeTime
+		AdjustAniTimeLim
+		mov eax, ExplodeTime
+		.IF explodeticks > eax
 			INVOKE CopyMap
 			mov explodeticks, 0
 			mov bl, 4
@@ -536,7 +507,7 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		.ENDIF
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
 	.ELSEIF aniFlag == 4
-		;show new
+		;出现新方块
 		.IF showticks == 0
 			INVOKE AddNum
 			mov edx, eax
@@ -557,30 +528,53 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 			mov newNumPosY, eax
 		.ENDIF
 		inc showticks
+		AdjustAniTimeLim
 		INVOKE InvalidateRect, hWin, ADDR GameRect, FALSE
-		.IF showticks > ShowNewTime
+		mov eax, ShowNewTime
+		.IF showticks > eax
 			mov showticks, 0
-			mov aniFlag, 0
-			mov keyLock, 0			
+			mov aniFlag, 0		
 			INVOKE CopyMap
 			INVOKE CheckMap
 			.IF eax == MAP_FAIL
+				mov keyLock, KEYLOCKED
 				INVOKE MessageBox, 0, ADDR FailMsg, ADDR MsgTitle, MB_OK
-				mov eax, 4
-				INVOKE InitMap
-				INVOKE CopyMap
+				ResetGame
 				INVOKE InvalidateRect, hWin, NULL, FALSE
 			.ELSEIF eax == MAP_WIN
+				mov keyLock, KEYLOCKED
 				INVOKE MessageBox, 0, ADDR WinMsg, ADDR MsgTitle, MB_OK
-				mov eax, 4
-				INVOKE InitMap
-				INVOKE CopyMap
+				ResetGame
 				INVOKE InvalidateRect, hWin, NULL, FALSE
 			.ENDIF
+			INVOKE TryExtractAction, hWin
 		.ENDIF
 	.ENDIF
 	ret
 TimerProc ENDP
+
+TryExtractAction PROC hWin:DWORD
+	mov aniLock, ANILOCKED
+	ExtractAQueue
+	.IF eax == -1
+		mov aniLock, ANIUNLOCKED
+		ret
+	.ENDIF
+	mov MoveDir, eax
+	INVOKE DoMove
+	mov qlen, eax
+	.IF qlen == 0
+		INVOKE TryExtractAction, hWin
+		ret
+	.ENDIF
+	INVOKE CheckHasCombBomb
+	mov aniFlag, 1 ;开始动画
+	.IF hasCombBomb == 2  
+        invoke PlayMp3BombFile,hWin,ADDR BombFileName
+		mov BombSoundTime, 200
+    .ENDIF
+	ret
+TryExtractAction ENDP
 
 ;绘图函数
 PaintProc PROC hWin:DWORD
@@ -623,10 +617,10 @@ PaintProc PROC hWin:DWORD
 	;先画砖块、空格等背景
 	mov xIndex, 0
 	mov yIndex, 0
-	.WHILE xIndex < 4
-		.WHILE yIndex < 4
-			mov ecx, xIndex
-			mov edx, yIndex
+	mov ecx, xIndex
+	mov edx, yIndex
+	.WHILE ecx < mapSize
+		.WHILE edx < mapSize
 			OldMapAt edx, ecx
 			mov ecx, eax
 			.IF (ecx >= POSITIVE_MAX) || (ecx == 0)
@@ -640,15 +634,21 @@ PaintProc PROC hWin:DWORD
 				INVOKE DrawSquare, xIndex, yIndex, CurrentBmp, 0, 100
 			.ENDIF
 			inc yIndex
+			mov ecx, xIndex
+			mov edx, yIndex
 		.ENDW
 		inc xIndex
 		mov yIndex, 0
+		mov ecx, xIndex
+		mov edx, yIndex
 	.ENDW
 	;再画数字
 	mov xIndex, 0
 	mov yIndex, 0
-	.WHILE xIndex < 4
-		.WHILE yIndex < 4
+	mov ecx, xIndex
+	mov edx, yIndex
+	.WHILE ecx < mapSize
+		.WHILE edx < mapSize
 			mov ecx, xIndex
 			mov edx, yIndex
 			OldMapAt edx, ecx
@@ -719,9 +719,13 @@ PaintProc PROC hWin:DWORD
 				mov movedis, 0
 			.ENDIF
 			inc yIndex
+			mov ecx, xIndex
+			mov edx, yIndex
 		.ENDW
 		inc xIndex
 		mov yIndex, 0
+		mov ecx, xIndex
+		mov edx, yIndex
 	.ENDW
 	
 	;画新添加的方块

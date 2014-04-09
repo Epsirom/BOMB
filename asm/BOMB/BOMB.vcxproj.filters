@@ -51,6 +51,11 @@
     <Image Include="images\icons\icon.ico" />
     <Image Include="images\bomb128.ico" />
     <Image Include="images\bomb107.bmp" />
+    <Image Include="images\pile107-4096.bmp" />
+    <Image Include="images\pile107-8192.bmp" />
+    <Image Include="images\pile107-16384.bmp" />
+    <Image Include="images\pile107-32768.bmp" />
+    <Image Include="images\pile107-65536.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource1.h" />

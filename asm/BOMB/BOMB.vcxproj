@@ -31,14 +31,19 @@
     <Image Include="images\pile107-1024.bmp" />
     <Image Include="images\pile107-128.bmp" />
     <Image Include="images\pile107-16.bmp" />
+    <Image Include="images\pile107-16384.bmp" />
     <Image Include="images\pile107-2.bmp" />
     <Image Include="images\pile107-2048.bmp" />
     <Image Include="images\pile107-256.bmp" />
     <Image Include="images\pile107-32.bmp" />
+    <Image Include="images\pile107-32768.bmp" />
     <Image Include="images\pile107-4.bmp" />
+    <Image Include="images\pile107-4096.bmp" />
     <Image Include="images\pile107-512.bmp" />
     <Image Include="images\pile107-64.bmp" />
+    <Image Include="images\pile107-65536.bmp" />
     <Image Include="images\pile107-8.bmp" />
+    <Image Include="images\pile107-8192.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource1.h" />
