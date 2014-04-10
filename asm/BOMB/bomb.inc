@@ -59,7 +59,13 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	ENDM
 
 	POSITIVE_MAX equ 80000000h
-	MENU_ABOUTAUTHOR equ 1000
+	MENU_NEWGAMEM equ 1000
+	MENU_NEWGAMEH equ 1001
+	MENU_SAVEGAME equ 1002
+	MENU_PLAYMUSIC equ 1003
+	MENU_STOPMUSIC equ 1004
+	MENU_HELPINFO equ 1005
+	MENU_ABOUTAUTHOR equ 1006
 	MaxMoveTime equ 8
 	MaxCombineTime equ 12
 	MaxShowNewTime equ 8
@@ -80,7 +86,7 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	NextNumberText db " Next Bomb Number:", 0
 	FontName db "Arial", 0
 	WinMsg db "YOU WIN!!!", 0
-	FailMsg db "YOU LOSE", 0
+	FailMsg db "YOU LOSE!", 0
 	LoadMsg db "Do you want to read the game progress?", 0
 	QuitMsg db "Do you want to save the game progress?", 0
 	MsgTitle db 0
@@ -88,9 +94,17 @@ MAP_SIZE = MAX_MAP_SIZE + 1
 	ErrorTitle db "Error",0
     ClassName db "Demo",0      
     WindowName db "BOMB",0      
-    MenuAbout db "Help", 0   
-    MenuAboutAuthor db "About Author", 0   
-    Author db "Author:wcc",0dh,"Date:   19/03/2014",0  
+    MenuAbout db "Help", 0
+	MenuAboutHelpInfo db "Help(H)", 0      
+    MenuAboutAuthor db "About Us(A)", 0   
+    Author db "Author: wcc",0dh,"Date: 19/03/2014",0
+	Help db "Keyboard Shortcuts",0dh,"'N' for creating a new game",0dh,"'S' for saving the game progress",0dh,"'P' for playing the background music",0dh,"'P' again for stopping the background music",0
+	MenuFile db "File",0 
+	MenuFileNewM db "New(medium)",0
+	MenuFileNewH db "New(hard)",0 
+	MenuFileSave db "Save(S)",0
+	MenuFilePlay db "Play Music(P)",0
+	MenuFileStop db "Stop Music(P)",0
 
 	;´°Ìå²ÎÊý
 	WndWidth dd 568
@@ -337,8 +351,8 @@ ResetParameter MACRO
 	mov SquareHeight, eax
 ENDM
 
-ResetGame MACRO
-	mov eax, 4
+ResetGame MACRO size:REQ
+	mov eax, size
 	INVOKE InitMap
 	INVOKE CopyMap
 	mov aniLock, ANIUNLOCKED

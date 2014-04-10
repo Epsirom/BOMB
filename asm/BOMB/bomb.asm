@@ -184,22 +184,21 @@ WinMain PROC hInst:DWORD,
 	INVOKE LoadSerialization
 	;初始化地图
 	.IF eax == 0
-		mov eax, 5
-		INVOKE InitMap
-		;根据size设置方块大小
-		ResetParameter
+		ResetGame 4
+		INVOKE InvalidateRect, hWnd, NULL, FALSE
 	.ELSE
 		;载入游戏进度对话框
 		INVOKE MessageBox, 0, ADDR LoadMsg, ADDR MsgTitle, MB_YESNO
 		.IF eax == 7  ; "No"
-			mov eax, 5
-			INVOKE InitMap
+			ResetGame 4
+			INVOKE InvalidateRect, hWnd, NULL, FALSE
+		.ELSE
 			ResetParameter
 		.ENDIF
 	.ENDIF
 	INVOKE CopyMap
 
-    INVOKE ShowWindow,hWnd,SW_SHOWNORMAL    ;     
+    INVOKE ShowWindow,hWnd,SW_SHOWNORMAL   
     INVOKE UpdateWindow,hWnd 
     ;设置时钟
     INVOKE SetTimer, hWnd, 1, Interval, NULL
@@ -338,15 +337,24 @@ WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 	LOCAL pt  :POINT
 
     .IF uMsg == WM_CREATE      
-    ;    INVOKE CreateMenu   
-    ;    mov hMenu, eax   
-    ;    .IF eax   
-    ;        INVOKE CreatePopupMenu      ;创建一级菜单   
-    ;        mov hPopMenu, eax           ;保存一级菜单句柄   
-    ;        INVOKE AppendMenu, hPopMenu, NULL, MENU_ABOUTAUTHOR, addr MenuAboutAuthor   ;添加二级菜单   
-    ;        INVOKE AppendMenu, hMenu, MF_POPUP, hPopMenu, addr MenuAbout                ;添加一级菜单   
-    ;    .ENDIF   
-    ;    INVOKE SetMenu, hWin, hMenu     ;设置菜单
+		INVOKE CreateMenu   
+		mov hMenu, eax   
+		.IF eax
+			INVOKE CreatePopupMenu      ;创建一级菜单   
+			mov hPopMenu, eax           ;保存一级菜单句柄   
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_NEWGAMEM, addr MenuFileNewM   ;添加二级菜单
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_NEWGAMEH, addr MenuFileNewH   ;添加二级菜单
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_SAVEGAME, addr MenuFileSave   ;添加二级菜单
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_PLAYMUSIC, addr MenuFilePlay   ;添加二级菜单
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_STOPMUSIC, addr MenuFileStop   ;添加二级菜单
+			INVOKE AppendMenu, hMenu, MF_POPUP, hPopMenu, addr MenuFile                ;添加一级菜单   
+			INVOKE CreatePopupMenu      ;创建一级菜单   
+			mov hPopMenu, eax           ;保存一级菜单句柄   
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_ABOUTAUTHOR, addr MenuAboutAuthor   ;添加二级菜单
+			INVOKE AppendMenu, hPopMenu, NULL, MENU_HELPINFO, addr MenuAboutHelpInfo   ;添加二级菜单
+			INVOKE AppendMenu, hMenu, MF_POPUP, hPopMenu, addr MenuAbout                ;添加一级菜单   
+		.ENDIF   
+		INVOKE SetMenu, hWin, hMenu     ;设置菜单
 		jmp WndProcExit
 	.ELSEIF uMsg == WM_TIMER
         INVOKE TimerProc, hWin, uMsg, wParam, lParam
@@ -373,10 +381,30 @@ WndProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
     .ELSEIF uMsg == WM_DESTROY   
         INVOKE PostQuitMessage,0        ;退出消息循环
 		jmp WndProcExit     
-    .ELSEIF uMsg == WM_COMMAND   
-        .IF wParam == MENU_ABOUTAUTHOR   
-            INVOKE MessageBoxA,hWin,ADDR Author,ADDR ClassName,MB_OK   
-        .ENDIF
+    .ELSEIF uMsg == WM_COMMAND
+		.IF wParam == MENU_NEWGAMEM
+			ResetGame 4
+			INVOKE InvalidateRect, hWnd, NULL, FALSE
+		.ELSEIF wParam == MENU_NEWGAMEH
+			ResetGame 5        
+			INVOKE InvalidateRect, hWnd, NULL, FALSE
+		.ELSEIF wParam == MENU_SAVEGAME
+			INVOKE SaveSerialization
+		.ELSEIF wParam == MENU_PLAYMUSIC
+			.IF PlayFlag == 0
+				mov PlayFlag,1  
+				invoke PlayMp3File,hWin,ADDR MusicFileName
+			.ENDIF
+		.ELSEIF wParam == MENU_STOPMUSIC
+			.IF PlayFlag == 1
+				invoke mciSendCommand,Mp3DeviceID,MCI_CLOSE,0,0
+				mov PlayFlag,0
+			.ENDIF
+		.ELSEIF wParam == MENU_ABOUTAUTHOR
+			INVOKE MessageBox, 0, ADDR Author, ADDR MsgTitle, MB_OK
+		.ELSEIF wParam == MENU_HELPINFO
+			INVOKE MessageBox, 0, ADDR Help, ADDR MsgTitle, MB_OK	   	     
+		.ENDIF
 		jmp WndProcExit   
     .ELSE
         INVOKE DefWindowProc,hWin,uMsg,wParam,lParam    ;调用默认消息处理函数   
@@ -427,8 +455,8 @@ KeyDownProc PROC hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 		mov eax, DIR_RIGHT
 		AppendAQueue eax
 	.ELSEIF wParam == 78 ;press VK 'N' to start a new game
-		mov eax, 4
-		INVOKE InitMap
+		ResetGame 4
+		INVOKE InvalidateRect, hWnd, NULL, FALSE
 	.ELSEIF wParam == 83 ;press VK 'S' to save game
 		INVOKE SaveSerialization
 	.ELSEIF wParam == 80 ;press VK 'P' to Play mp3, press again to stop mp3
@@ -539,12 +567,12 @@ TimerProc PROC USES ebx edx hWin:DWORD, uMsg:DWORD, wParam:DWORD, lParam:DWORD
 			.IF eax == MAP_FAIL
 				mov keyLock, KEYLOCKED
 				INVOKE MessageBox, 0, ADDR FailMsg, ADDR MsgTitle, MB_OK
-				ResetGame
+				ResetGame 4
 				INVOKE InvalidateRect, hWin, NULL, FALSE
 			.ELSEIF eax == MAP_WIN
 				mov keyLock, KEYLOCKED
 				INVOKE MessageBox, 0, ADDR WinMsg, ADDR MsgTitle, MB_OK
-				ResetGame
+				ResetGame 4
 				INVOKE InvalidateRect, hWin, NULL, FALSE
 			.ENDIF
 			INVOKE TryExtractAction, hWin
