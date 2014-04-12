@@ -99,6 +99,7 @@ WinMain PROC hInst:DWORD,
                     OFFSET FontName
     mov textFont, eax
 
+	;计算窗口位置，使窗口位于屏幕中央
 	mov dwStyle, WS_OVERLAPPEDWINDOW
 	mov eax, WS_SIZEBOX
 	not eax
@@ -177,7 +178,7 @@ WinMain PROC hInst:DWORD,
 	;初始化rect
 	INVOKE InitRect
 
-	;初始化动画时间
+	;初始化动画时间上限
 	SetOriginTimeLim
 
 	;载入游戏进度
@@ -617,14 +618,12 @@ PaintProc PROC hWin:DWORD
 
     INVOKE CreateCompatibleDC, hDC
     mov memDC, eax
-
 	INVOKE CreateCompatibleDC, hDC
     mov imgDC, eax
 	INVOKE CreateCompatibleBitmap, hDC, WndWidth, WndHeight
 	mov hBitmap, eax
     INVOKE SelectObject, memDC, hBitmap
     mov hOld, eax
-	;INVOKE CreateSolidBrush, BgColor
 	INVOKE FillRect, memDC, ADDR rect, bgBrush
 	
 	;画背景
@@ -640,7 +639,6 @@ PaintProc PROC hWin:DWORD
 	mov textRect.right, 300
 	mov textRect.bottom, 200
 	INVOKE DrawText, memDC, ADDR GameTitle, -1, ADDR textRect, DT_VCENTER 
-	;INVOKE BitBlt, memDC, 0, 0, textRect.right, textRect.bottom, imgDC, 0, 0, SRCCOPY
 
 	;先画砖块、空格等背景
 	mov xIndex, 0
