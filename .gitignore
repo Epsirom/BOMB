@@ -22,3 +22,6 @@
 *.aps
 Debug
 Release
+
+# Front files
+.idea
