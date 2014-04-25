@@ -223,12 +223,14 @@ GameManager.prototype.move = function (direction) {
             var counter = this.grid.explode();
             this.score += ((2048 / this.targetNum) * counter);
             this.targetNum <<= 1;
+            this.actuator.playBomb();
         }
         this.won = !self.blocksExists();
         this.addRandomTile();
 
         if (!this.movesAvailable()) {
             this.over = true; // Game over!
+            this.actuator.playOver();
         }
 
         this.actuate();

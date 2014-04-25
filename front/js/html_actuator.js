@@ -4,6 +4,7 @@ function HTMLActuator() {
     this.bestContainer    = document.querySelector(".best-container");
     this.messageContainer = document.querySelector(".game-message");
     this.targetNumContainer = document.querySelector(".combine-container");
+    this.soundContainer = document.querySelector(".sound-container");
 
     this.score = 0;
     this.targetNum = 4;
@@ -189,4 +190,21 @@ HTMLActuator.prototype.clearMessage = function () {
     // IE only takes one value to remove at a time.
     this.messageContainer.classList.remove("game-won");
     this.messageContainer.classList.remove("game-over");
+};
+
+HTMLActuator.prototype.playBomb = function () {
+    this.playSound("bomb.mp3");
+};
+
+HTMLActuator.prototype.playWin = function () {
+    this.playSound("win.wav");
+};
+
+HTMLActuator.prototype.playOver = function () {
+    this.playSound("over.wav");
+};
+
+HTMLActuator.prototype.playSound = function(sound) {
+    var self = this;
+    self.soundContainer.innerHTML = '<embed src="../meta/' + sound + '" loop="0" autostart="true" hidden="true"></embed>';
 };
